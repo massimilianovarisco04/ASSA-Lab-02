@@ -57,9 +57,10 @@ for i = 1 : size(x0,2)
     xlabel('Time[s]');
     ylabel('Speed[m/s]');
     legend('x_dot', 'y_dot', 'z_dot');
-     title(['Coordinates of speed case ', scenari(i)]);
+    title(['Coordinates of speed case ', scenari(i)]);
 end
 
+%% 
 
 %% ----------------------- Definizione Funzioni ---------------------------
 % Struttura contenente dati del problema
