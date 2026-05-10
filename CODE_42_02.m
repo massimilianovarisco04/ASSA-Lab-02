@@ -8,13 +8,17 @@ scenari = ['A', 'B', 'C', 'D', 'E'];
 proximityP = proximity_parameters();
 n = proximityP.n;
 T = proximityP.T;
+%mettiamo tutte le condizioni iniziali relative alla stessa coordinata di
+%stato un un vettore
 x_0 = [0.1, 0.1, 0, 0.1, 15];
 y_0 = [0, 0, 0.05, 0, 0];
 z_0 = [0, 0, 0.1, 0.05, 5];
 x_dot_0 = [0, 0, 0, 0, 0];
 y_dot_0 = [-2*n*x_0(1), -1.5*n*x_0(2), 0, -1.5*n*x_0(4), -2*n*x_0(5)];
 z_dot_0 = [n*x_0(1), 0, 0, 0, 0];
+%costruiamo la matrice delle condizioni iniziali
 x0 = [x_0; x_dot_0; y_0; y_dot_0; x_0; x_dot_0];
+
 t_0 = 0;
 t_f = 2*T;
 
@@ -27,6 +31,7 @@ for i = 1 : size(x0,2)
     ODEResults_obj = solve(ODE_obj, t_0, t_f);
     tt = ODEResults_obj.Time'; 
     xx = (ODEResults_obj.Solution'); 
+
     % Solo per verifica
     if i == 1
         figure('Name',['Trajectory ', scenari(i)]);
@@ -37,6 +42,7 @@ for i = 1 : size(x0,2)
         zlabel('z [m]');
         title(['Trajectory', scenari(i)]);
     end
+
     figure('Name',['Scenario ', scenari(i)]);
     subplot(2,1,1)
     plot(tt, xx(:,1), 'LineWidth',2);
@@ -48,6 +54,7 @@ for i = 1 : size(x0,2)
     ylabel('Position[m]');
     legend('x(t)', 'y(t)', 'z(t)');
     title(['Coordinates case ', scenari(i)]);
+
     subplot(2,1,2)
     plot(tt, xx(:,2), 'LineWidth',2);
     hold on;
