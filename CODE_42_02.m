@@ -17,7 +17,7 @@ x_dot_0 = [0, 0, 0, 0, 0];
 y_dot_0 = [-2*n*x_0(1), -1.5*n*x_0(2), 0, -1.5*n*x_0(4), -2*n*x_0(5)];
 z_dot_0 = [n*x_0(1), 0, 0, 0, 0];
 %costruiamo la matrice delle condizioni iniziali, è 6 righe e 5 colonne
-x0 = [x_0; x_dot_0; y_0; y_dot_0; x_0; x_dot_0];
+x0 = [x_0; x_dot_0; y_0; y_dot_0; z_0; z_dot_0];
 
 t_0 = 0;
 t_f = 2*T;
@@ -200,7 +200,48 @@ end
 %accettabile in nessun caso. 
 
 %% task 4 - Analytical Solution Validation and Notable Cases
+%una volta risolta l'equazione analiticamente, matlab serve a risolvere il
+%problema di cauchy, nel senso che risolvo un sistema lineare per trovare
+%le varie condizioni al contorno.
+S=[1 1 0 2/n 0 0;
+    1i*n, -1i*n, 0 0 0 0;
+    2*1i, -2*1i, 1 0 0 0;
+    -2*n, -2*n, 0, -3, 0 0;
+    0 0 0 0 1 1;
+    0 0 0 0 1i*n, -1i*n]; %è in [m]
+coeff=zeros(5,6);
 
+coefficienti=zeros(5,6);
+for k=1:size(x0,2)
+    coeff_curr=S\(x0(:,k).*10^3); %i coefficienti sono messi in ordine da x_0 a z_1, in ordine, in modo da
+    %essere direttamente sostituiti nella formula analitica
+    coefficienti(k,:)=coeff_curr; %serve per controllo
+
+x=@(t,coeff) coeff(1)*exp(1i*n*t)+coeff(2)*exp(-1i*n*t)+2*(coeff(4)/n);
+y=@(t,coeff) coeff(3)-3*coeff(4).*t+2*1i*(coeff(1)*exp(1i*n*t)-coeff(2)*exp(-1i*n*t));
+z=@(t,coeff) coeff(5)*exp(1i*n*t)+coeff(6)*exp(-1i*n*t);
+t_vect=0:1:2*proximityP.T;
+x_vect=real(x(t_vect, coeff_curr));
+y_vect=real(y(t_vect, coeff_curr));
+z_vect=real(z(t_vect,coeff_curr)); %real assicura che la parte immaginaria venga messa a zero, essendo molto molto piccola
+
+[y]=initial(sys, x0(:,k).*10^3, t_vect);
+
+figure('Name',['Comparison analityc vs non linear ', scenari(k)]);
+    plot(t_vect, y(:,1), 'LineWidth',2);
+    hold on;
+    plot(t_vect, y(:,3), 'LineWidth',2);
+    plot(t_vect, y(:,5), 'LineWidth',2);
+    plot(t_vect, x_vect,'--','Color','black', LineWidth=2);
+    plot(t_vect, y_vect,'--', LineWidth=2);
+    plot(t_vect, z_vect,'--', LineWidth=2);
+    grid on;
+    xlabel('Time[s]');
+    ylabel('Position[m]');
+    legend('x(t)', 'y(t)', 'z(t)', 'x_a(t)', 'y_a(t)', 'z_a(t)');
+    title(['Coordinates case ', scenari(k)]);
+
+end
 
 
 
