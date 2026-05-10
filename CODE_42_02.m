@@ -40,6 +40,9 @@ for i = 1 : size(x0,2)
         xlabel('x [m]');
         ylabel('y [m]');
         zlabel('z [m]');
+        xlim([-100 100]);
+        ylim([-200 200]);
+        zlim([-150 150]);
         title(['Trajectory', scenari(i)]);
     end
 
@@ -67,7 +70,18 @@ for i = 1 : size(x0,2)
     title(['Coordinates of speed case ', scenari(i)]);
 end
 
-%% 
+%% Task 2 - Aalysys of the Linearized Dynamical System
+A = [ 0 1 0 0 0 0;
+     3*n^2 0 0 2*n 0 0;
+     0 0 0 1 0 0;
+     0 -2*n 0 0 0 0;
+     0 0 0 0 0 1;
+     0 0 0 0 -n^2 0];
+
+eigenpairs = eig(A);
+
+
+
 
 %% ----------------------- Definizione Funzioni ---------------------------
 % Struttura contenente dati del problema
@@ -91,7 +105,7 @@ end
 function xdot = proximityP_f (t,x, proximityP)
     mu = proximityP.mu;
     R0 = proximityP.R0;
-    n = proximityP.n;
+    n  = proximityP.n;
 
     x1 = x(1);
     x2 = x(2);
@@ -100,7 +114,7 @@ function xdot = proximityP_f (t,x, proximityP)
     x5 = x(5);
     x6 = x(6);
 
-    rc = sqrt((R0+x1)^2 + x3^2 + x6^2);
+    rc = sqrt((R0+x1)^2 + x3^2 + x5^2);
 
     xdot_1 = x2;
     xdot_2 = 2*n*x4 + n^2*(R0+x1) - (mu*(R0+x1))/rc^3;
