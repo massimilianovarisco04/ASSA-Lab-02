@@ -35,6 +35,9 @@ for i = 1 : size(x0,2)
         xlabel('x [m]');
         ylabel('y [m]');
         zlabel('z [m]');
+        xlim([-100 100]);
+        ylim([-200 200]);
+        zlim([-150 150]);
         title(['Trajectory', scenari(i)]);
     end
     figure('Name',['Scenario ', scenari(i)]);
