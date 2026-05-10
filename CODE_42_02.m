@@ -9,20 +9,20 @@ proximityP = proximity_parameters();
 n = proximityP.n;
 T = proximityP.T;
 %mettiamo tutte le condizioni iniziali relative alla stessa coordinata di
-%stato un un vettore
+%stato un un vettore. Sono tutte in [Km]!!
 x_0 = [0.1, 0.1, 0, 0.1, 15];
 y_0 = [0, 0, 0.05, 0, 0];
 z_0 = [0, 0, 0.1, 0.05, 5];
 x_dot_0 = [0, 0, 0, 0, 0];
 y_dot_0 = [-2*n*x_0(1), -1.5*n*x_0(2), 0, -1.5*n*x_0(4), -2*n*x_0(5)];
 z_dot_0 = [n*x_0(1), 0, 0, 0, 0];
-%costruiamo la matrice delle condizioni iniziali
+%costruiamo la matrice delle condizioni iniziali, è 6 righe e 5 colonne
 x0 = [x_0; x_dot_0; y_0; y_dot_0; x_0; x_dot_0];
 
 t_0 = 0;
 t_f = 2*T;
 
-% Risoluzione sistema non lineare
+% Risoluzione sistema non lineare 
 for i = 1 : size(x0,2)
     ODE_obj = ode;  
     ODE_obj.ODEFcn = @(t,x) proximityP_f(t,x, proximityP);
@@ -70,15 +70,136 @@ for i = 1 : size(x0,2)
     title(['Coordinates of speed case ', scenari(i)]);
 end
 
-%% Task 2 - Aalysys of the Linearized Dynamical System
+%% Task 2 - Analisys of the Linearized Dynamical System
 A = [ 0 1 0 0 0 0;
      3*n^2 0 0 2*n 0 0;
      0 0 0 1 0 0;
      0 -2*n 0 0 0 0;
      0 0 0 0 0 1;
      0 0 0 0 -n^2 0];
+%n non va aggiustata come unità di misura perchè è in [1/s]
 
 eigenpairs = eig(A);
+
+%% Task 3 - Numerical Simulation and Model Comparison
+B=zeros(size(A,1), 1);
+C=[1 0 0 0 0 0;
+    0 0 0 0 0 0;
+    0 0 1 0 0 0;
+    0 0 0 0 0 0;
+    0 0 0 0 1 0;
+    0 0 0 0 0 0];
+%C è costruita in questo modo perchè non ci interessano le velocità ma solo
+%le posizioni in questa simulazione
+D=zeros(size(C,1), 1);
+
+sys=ss(A,B,C,D);
+t_linear=linspace(0,2*proximityP.T, 10000);
+
+for i=1:size(x0,2)
+
+    ODE_obj = ode;  
+    ODE_obj.ODEFcn = @(t,x) proximityP_f(t,x, proximityP);
+    ODE_obj.InitialValue = x0(:,i).*10^3;
+    ODE_obj.Solver = 'ode45';
+    ODEResults_obj = solve(ODE_obj, t_0, t_f);
+    tt = ODEResults_obj.Time'; 
+    xx = (ODEResults_obj.Solution');
+
+    [y]=initial(sys, x0(:,i).*10^3, t_linear);
+    figure('Name',['Comparison linear vs non linear ', scenari(i)]);
+    plot(tt, xx(:,1), 'LineWidth',2);
+    hold on;
+    plot(tt, xx(:,3), 'LineWidth',2);
+    plot(tt, xx(:,5), 'LineWidth',2);
+    plot(t_linear, y(:,1),'--','Color','black', LineWidth=2);
+    plot(t_linear, y(:,3),'--', LineWidth=2);
+    plot(t_linear, y(:,5),'--', LineWidth=2);
+    grid on;
+    xlabel('Time[s]');
+    ylabel('Position[m]');
+    legend('x(t)', 'y(t)', 'z(t)', 'x_l(t)', 'y_l(t)', 'z_l(t)');
+    title(['Coordinates case ', scenari(i)]);
+
+    y_err_1=interp1(t_linear, y(:,1), tt, 'linear');
+    y_err_3=interp1(t_linear, y(:,3), tt, 'linear');
+    y_err_5=interp1(t_linear, y(:,5), tt, 'linear');
+
+%plottiamo gli errori
+figure('Name','Absolute error between linear and not linear')
+    plot(tt, abs(y_err_1(:)-xx(:,1)), LineWidth=2);
+    hold on;
+    plot(tt, abs(y_err_3(:)-xx(:,3)), LineWidth=2);
+    plot(tt, abs(y_err_5(:)-xx(:,5)), LineWidth=2);
+    grid on;
+    xlabel('Time[s]');
+    ylabel('Error in Position[m]');
+    legend('err. x(t)', 'err. y(t)', 'err. z(t)');
+    title(['Coordinates case ', scenari(i)]);
+
+end
+
+%quale può essere un errore accettabile nel confronto tra lineare e non
+%lineare?
+%sapendo che il target è una nave spaziale, e che il chaser è un
+%modulo che deve approcciare la navicella, il margine di
+%errore sulla posizione è molto ristretto. nel caso di approccio fra i due
+%oggetti, il margine di errore nel caso di ingresso da portellone potrebbe
+%essere di 10/20 cm.  
+
+%detto questo, nessun modello lineare consente di rientrare all'interno di
+%questa soglia, senza divergere, per un tempo di 2 periodi orbitali intorno
+%alla terra. ciò significa che l'intervallo di tempo utile per l'utilizzo
+%di una simulazione lineare ai nostri scopi è molto inferiore a quello
+%delle due orbite. 
+%considerando che nell'ordine dei 500 secondi il modello non lineare e
+%quello lineare sembrano relativamente vicini, utilizziamo questo
+%intervallo come running time del sistema, e vediamo al termine di questo
+%intervallo quale dei 5 scenari ha soddisfatto il requisito di errore
+%assoluto<20 cm. ciò comunque significa che l'intera missione dovrà essere
+%svolta in un tempo di circa 7 minuti, se ci si vuole basare sulla simulazione
+%lineare per calcolare la posizione del chaser. dopo questo tempo, si
+%commetterebbe un errore che potrebbe risultare, secondo le ipotesi
+%considerate, in un danno da evitare a ogni costo.
+
+%usiamo un running time di 500 secondi: 
+t_max=500;
+t_linear=linspace(0,t_max,10000);
+
+for i=1:size(x0,2)
+
+    ODE_obj = ode;  
+    ODE_obj.ODEFcn = @(t,x) proximityP_f(t,x, proximityP);
+    ODE_obj.InitialValue = x0(:,i).*10^3;
+    ODE_obj.Solver = 'ode45';
+    ODEResults_obj = solve(ODE_obj, t_0, t_max);
+    tt = ODEResults_obj.Time'; 
+    xx = (ODEResults_obj.Solution');
+
+    [y]=initial(sys, x0(:,i).*10^3, t_linear);
+
+    y_err_1=interp1(t_linear, y(:,1), tt, 'linear');
+    y_err_3=interp1(t_linear, y(:,3), tt, 'linear');
+    y_err_5=interp1(t_linear, y(:,5), tt, 'linear');
+
+%plottiamo gli errori nel caso dei 500 secondi
+figure('Name','Absolute error between linear and not linear')
+    plot(tt, abs(y_err_1(:)-xx(:,1)), LineWidth=2);
+    hold on;
+    plot(tt, abs(y_err_3(:)-xx(:,3)), LineWidth=2);
+    plot(tt, abs(y_err_5(:)-xx(:,5)), LineWidth=2);
+    grid on;
+    xlabel('Time[s]');
+    ylabel('Error in Position[m]');
+    legend('err. x(t)', 'err. y(t)', 'err. z(t)');
+    title(['Coordinates case ', scenari(i)]);
+
+end
+%emerge che per lo scenario C il modello lineare è buono, per gli altri
+%scenari è decente fino a circa 250 secondi. lo scenario E non è
+%accettabile in nessun caso. 
+
+%% task 4 - Analytical Solution Validation and Notable Cases
 
 
 
