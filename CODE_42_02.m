@@ -96,6 +96,8 @@ D=zeros(size(C,1), 1);
 sys=ss(A,B,C,D);
 t_linear=linspace(0,2*proximityP.T, 10000);
 
+t_limite = NaN(1, size(x0,2));
+
 for i=1:size(x0,2)
 
     ODE_obj = ode;  
@@ -126,14 +128,17 @@ for i=1:size(x0,2)
     y_err_5=interp1(t_linear, y(:,5), tt, 'linear');
 
 %plottiamo gli errori
-figure('Name','Absolute error between linear and not linear')
-    plot(tt, abs(y_err_1(:)-xx(:,1)), LineWidth=2);
+figure('Name','Relative error between linear and not linear')
+    plot(tt, (abs(y_err_1(:)-xx(:,1)))./abs(xx(:,1)), LineWidth=2);
     hold on;
-    plot(tt, abs(y_err_3(:)-xx(:,3)), LineWidth=2);
-    plot(tt, abs(y_err_5(:)-xx(:,5)), LineWidth=2);
+    plot(tt, abs(y_err_3(:)-xx(:,3))./abs(xx(:,3)), LineWidth=2);
+    plot(tt, abs(y_err_5(:)-xx(:,5))./abs(xx(:,5)), LineWidth=2);
     grid on;
     xlabel('Time[s]');
-    ylabel('Error in Position[m]');
+    ylabel('Relative Error in Position');
+    yline(0.01, 'r--');
+    ylim([0 0.02]);
+    xlim([0 1000]);
     legend('err. x(t)', 'err. y(t)', 'err. z(t)');
     title(['Coordinates case ', scenari(i)]);
 
@@ -144,45 +149,13 @@ end
 %sapendo che il target è una nave spaziale, e che il chaser è un
 %modulo che deve approcciare la navicella, il margine di
 %errore sulla posizione è molto ristretto. nel caso di approccio fra i due
-%oggetti, il margine di errore nel caso di ingresso da portellone potrebbe
-%essere di 10/20 cm.  
+%oggetti, il margine di errore potrebbe essere dell'1% sulla posizione
+%relativa, per ogni coordinata. 
+% è quello che è stato plottato nel grafico,
+%estraiamo a mano circa un tempo limite accettabile per l'approssimazione
+%lineare, 
 
-%usiamo un running time di 500 secondi: 
-% t_max=500;
-% t_linear=linspace(0,t_max,10000);
-% 
-% for i=1:size(x0,2)
-% 
-%     ODE_obj = ode;  
-%     ODE_obj.ODEFcn = @(t,x) proximityP_f(t,x, proximityP);
-%     ODE_obj.InitialValue = x0(:,i).*10^3;
-%     ODE_obj.Solver = 'ode45';
-%     ODEResults_obj = solve(ODE_obj, t_0, t_max);
-%     tt = ODEResults_obj.Time'; 
-%     xx = (ODEResults_obj.Solution');
-% 
-%     [y]=initial(sys, x0(:,i).*10^3, t_linear);
-% 
-%     y_err_1=interp1(t_linear, y(:,1), tt, 'linear');
-%     y_err_3=interp1(t_linear, y(:,3), tt, 'linear');
-%     y_err_5=interp1(t_linear, y(:,5), tt, 'linear');
-% 
-% %plottiamo gli errori nel caso dei 500 secondi
-% figure('Name','Absolute error between linear and not linear')
-%     plot(tt, abs(y_err_1(:)-xx(:,1)), LineWidth=2);
-%     hold on;
-%     plot(tt, abs(y_err_3(:)-xx(:,3)), LineWidth=2);
-%     plot(tt, abs(y_err_5(:)-xx(:,5)), LineWidth=2);
-%     grid on;
-%     xlabel('Time[s]');
-%     ylabel('Error in Position[m]');
-%     legend('err. x(t)', 'err. y(t)', 'err. z(t)');
-%     title(['Coordinates case ', scenari(i)]);
 
-% end
-%emerge che per lo scenario C il modello lineare è buono, per gli altri
-%scenari è decente fino a circa 250 secondi. lo scenario E non è
-%accettabile in nessun caso. 
 
 %% task 4 - Analytical Solution Validation and Notable Cases
 %una volta risolta l'equazione analiticamente, matlab serve a risolvere il
