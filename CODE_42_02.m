@@ -147,54 +147,39 @@ end
 %oggetti, il margine di errore nel caso di ingresso da portellone potrebbe
 %essere di 10/20 cm.  
 
-%detto questo, nessun modello lineare consente di rientrare all'interno di
-%questa soglia, senza divergere, per un tempo di 2 periodi orbitali intorno
-%alla terra. ciò significa che l'intervallo di tempo utile per l'utilizzo
-%di una simulazione lineare ai nostri scopi è molto inferiore a quello
-%delle due orbite. 
-%considerando che nell'ordine dei 500 secondi il modello non lineare e
-%quello lineare sembrano relativamente vicini, utilizziamo questo
-%intervallo come running time del sistema, e vediamo al termine di questo
-%intervallo quale dei 5 scenari ha soddisfatto il requisito di errore
-%assoluto<20 cm. ciò comunque significa che l'intera missione dovrà essere
-%svolta in un tempo di circa 7 minuti, se ci si vuole basare sulla simulazione
-%lineare per calcolare la posizione del chaser. dopo questo tempo, si
-%commetterebbe un errore che potrebbe risultare, secondo le ipotesi
-%considerate, in un danno da evitare a ogni costo.
-
 %usiamo un running time di 500 secondi: 
-t_max=500;
-t_linear=linspace(0,t_max,10000);
+% t_max=500;
+% t_linear=linspace(0,t_max,10000);
+% 
+% for i=1:size(x0,2)
+% 
+%     ODE_obj = ode;  
+%     ODE_obj.ODEFcn = @(t,x) proximityP_f(t,x, proximityP);
+%     ODE_obj.InitialValue = x0(:,i).*10^3;
+%     ODE_obj.Solver = 'ode45';
+%     ODEResults_obj = solve(ODE_obj, t_0, t_max);
+%     tt = ODEResults_obj.Time'; 
+%     xx = (ODEResults_obj.Solution');
+% 
+%     [y]=initial(sys, x0(:,i).*10^3, t_linear);
+% 
+%     y_err_1=interp1(t_linear, y(:,1), tt, 'linear');
+%     y_err_3=interp1(t_linear, y(:,3), tt, 'linear');
+%     y_err_5=interp1(t_linear, y(:,5), tt, 'linear');
+% 
+% %plottiamo gli errori nel caso dei 500 secondi
+% figure('Name','Absolute error between linear and not linear')
+%     plot(tt, abs(y_err_1(:)-xx(:,1)), LineWidth=2);
+%     hold on;
+%     plot(tt, abs(y_err_3(:)-xx(:,3)), LineWidth=2);
+%     plot(tt, abs(y_err_5(:)-xx(:,5)), LineWidth=2);
+%     grid on;
+%     xlabel('Time[s]');
+%     ylabel('Error in Position[m]');
+%     legend('err. x(t)', 'err. y(t)', 'err. z(t)');
+%     title(['Coordinates case ', scenari(i)]);
 
-for i=1:size(x0,2)
-
-    ODE_obj = ode;  
-    ODE_obj.ODEFcn = @(t,x) proximityP_f(t,x, proximityP);
-    ODE_obj.InitialValue = x0(:,i).*10^3;
-    ODE_obj.Solver = 'ode45';
-    ODEResults_obj = solve(ODE_obj, t_0, t_max);
-    tt = ODEResults_obj.Time'; 
-    xx = (ODEResults_obj.Solution');
-
-    [y]=initial(sys, x0(:,i).*10^3, t_linear);
-
-    y_err_1=interp1(t_linear, y(:,1), tt, 'linear');
-    y_err_3=interp1(t_linear, y(:,3), tt, 'linear');
-    y_err_5=interp1(t_linear, y(:,5), tt, 'linear');
-
-%plottiamo gli errori nel caso dei 500 secondi
-figure('Name','Absolute error between linear and not linear')
-    plot(tt, abs(y_err_1(:)-xx(:,1)), LineWidth=2);
-    hold on;
-    plot(tt, abs(y_err_3(:)-xx(:,3)), LineWidth=2);
-    plot(tt, abs(y_err_5(:)-xx(:,5)), LineWidth=2);
-    grid on;
-    xlabel('Time[s]');
-    ylabel('Error in Position[m]');
-    legend('err. x(t)', 'err. y(t)', 'err. z(t)');
-    title(['Coordinates case ', scenari(i)]);
-
-end
+% end
 %emerge che per lo scenario C il modello lineare è buono, per gli altri
 %scenari è decente fino a circa 250 secondi. lo scenario E non è
 %accettabile in nessun caso. 
