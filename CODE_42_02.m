@@ -136,7 +136,7 @@ figure('Name','Relative error between linear and not linear')
     grid on;
     xlabel('Time[s]');
     ylabel('Relative Error in Position');
-    yline(0.01, 'r--');
+    yline(0.01, 'r--', LineWidth=2.5);
     ylim([0 0.02]);
     xlim([0 1000]);
     legend('err. x(t)', 'err. y(t)', 'err. z(t)');
@@ -186,13 +186,13 @@ z_vect=real(z(t_vect,coeff_curr)); %real assicura che la parte immaginaria venga
 [y]=initial(sys, x0(:,k).*10^3, t_vect);
 
 figure('Name',['Comparison analityc vs non linear ', scenari(k)]);
-    plot(t_vect, y(:,1), 'LineWidth',2);
+    plot(t_vect, y(:,1), 'LineWidth',5);
     hold on;
-    plot(t_vect, y(:,3), 'LineWidth',2);
-    plot(t_vect, y(:,5), 'LineWidth',2);
-    plot(t_vect, x_vect,'--','Color','black', LineWidth=2);
-    plot(t_vect, y_vect,'--', LineWidth=2);
-    plot(t_vect, z_vect,'--', LineWidth=2);
+    plot(t_vect, y(:,3), 'LineWidth',5);
+    plot(t_vect, y(:,5), 'LineWidth',5);
+    plot(t_vect, x_vect,'--','Color','black', LineWidth=5);
+    plot(t_vect, y_vect,'--', LineWidth=5);
+    plot(t_vect, z_vect,'--', LineWidth=5);
     grid on;
     xlabel('Time[s]');
     ylabel('Position[m]');
