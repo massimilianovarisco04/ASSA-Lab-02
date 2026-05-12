@@ -303,73 +303,48 @@ pos_end   = [x_traj(end); y_traj(end); z_traj(end)];
 
 % ── 7. PLOT ──────────────────────────────────────────────────────────────────
 
-% --- Figura 1: Orbita 3D ---
-figure('Name', 'Orbita di trasferimento 3D', 'NumberTitle', 'off');
-plot3(x_traj, y_traj, z_traj, 'b-', 'LineWidth', 1.8); hold on;
-plot3(pos_start(1), pos_start(2), pos_start(3), 'go', ...
-      'MarkerSize', 10, 'MarkerFaceColor', 'g', 'DisplayName', 'Start');
-plot3(pos_end(1),   pos_end(2),   pos_end(3),   'rs', ...
-      'MarkerSize', 10, 'MarkerFaceColor', 'r', 'DisplayName', 'Arrivo');
-plot3(target_pos(1), target_pos(2), target_pos(3), 'k*', ...
-      'MarkerSize', 14, 'LineWidth', 2,              'DisplayName', 'Target (origine)');
+
+traj = struct(); % conterrà i campi A e D
+
+for i = 1:size(x0, 2)
+    ODE_obj            = ode;
+    ODE_obj.ODEFcn     = @(t,x) proximityP_f(t, x, proximityP);
+    ODE_obj.InitialValue = x0(:,i) .* 1e3;
+    ODE_obj.Solver     = 'ode45';
+    ODEResults_obj     = solve(ODE_obj, t_0, t_f);
+    tt = ODEResults_obj.Time';
+    xx = ODEResults_obj.Solution';
+
+    % ── Salva traiettoria per A (i=1) e D (i=4) ──────────────────────────
+    if i == 1
+        traj.A.x = xx(:,1); traj.A.y = xx(:,3); traj.A.z = xx(:,5);
+    elseif i == 4
+        traj.D.x = xx(:,1); traj.D.y = xx(:,3); traj.D.z = xx(:,5);
+    end
+
+    % ... il resto del tuo loop rimane identico ...
+end
+
+figure('Name', 'Orbite A e D – Confronto 3D', 'NumberTitle', 'off');
+
+plot3(traj.A.x, traj.A.y, traj.A.z, 'b-', 'LineWidth', 2, 'DisplayName', 'Orbita A');
+hold on;
+plot3(traj.D.x, traj.D.y, traj.D.z, 'r-', 'LineWidth', 2, 'DisplayName', 'Orbita D');
+
+% Punti di partenza
+plot3(traj.A.x(1), traj.A.y(1), traj.A.z(1), 'bo', ...
+      'MarkerSize', 10, 'MarkerFaceColor', 'b', 'DisplayName', 'Start A');
+plot3(traj.D.x(1), traj.D.y(1), traj.D.z(1), 'ro', ...
+      'MarkerSize', 10, 'MarkerFaceColor', 'r', 'DisplayName', 'Start D');
+
+% Origine (target / Chief)
+plot3(0, 0, 0, 'k*', 'MarkerSize', 14, 'LineWidth', 2, 'DisplayName', 'Chief (origine)');
+
 xlabel('x [m]'); ylabel('y [m]'); zlabel('z [m]');
-title('Orbita di Trasferimento – Frame LVLH (3D)');
-legend('Traiettoria', 'Start', 'Arrivo', 'Target', 'Location', 'best');
-grid on; axis equal; view(35, 25);
-
-% --- Figura 2: Proiezioni 2D (x-y, x-z, y-z) ---
-figure('Name', 'Proiezioni orbita', 'NumberTitle', 'off');
-
-subplot(1,3,1);
-plot(x_traj, y_traj, 'b-', 'LineWidth', 1.5); hold on;
-plot(pos_start(1), pos_start(2), 'go', 'MarkerSize', 8, 'MarkerFaceColor', 'g');
-plot(pos_end(1),   pos_end(2),   'rs', 'MarkerSize', 8, 'MarkerFaceColor', 'r');
-plot(target_pos(1), target_pos(2), 'k*', 'MarkerSize', 12, 'LineWidth', 2);
-xlabel('x [m]'); ylabel('y [m]'); title('Piano x-y');
-legend('Traiettoria','Start','Arrivo','Target','Location','best');
+title('Orbite Relative – Scenari A e D');
+legend('Location', 'best');
 grid on; axis equal;
-
-subplot(1,3,2);
-plot(x_traj, z_traj, 'b-', 'LineWidth', 1.5); hold on;
-plot(pos_start(1), pos_start(3), 'go', 'MarkerSize', 8, 'MarkerFaceColor', 'g');
-plot(pos_end(1),   pos_end(3),   'rs', 'MarkerSize', 8, 'MarkerFaceColor', 'r');
-plot(target_pos(1), target_pos(3), 'k*', 'MarkerSize', 12, 'LineWidth', 2);
-xlabel('x [m]'); ylabel('z [m]'); title('Piano x-z');
-legend('Traiettoria','Start','Arrivo','Target','Location','best');
-grid on; axis equal;
-
-subplot(1,3,3);
-plot(y_traj, z_traj, 'b-', 'LineWidth', 1.5); hold on;
-plot(pos_start(2), pos_start(3), 'go', 'MarkerSize', 8, 'MarkerFaceColor', 'g');
-plot(pos_end(2),   pos_end(3),   'rs', 'MarkerSize', 8, 'MarkerFaceColor', 'r');
-plot(target_pos(2), target_pos(3), 'k*', 'MarkerSize', 12, 'LineWidth', 2);
-xlabel('y [m]'); ylabel('z [m]'); title('Piano y-z');
-legend('Traiettoria','Start','Arrivo','Target','Location','best');
-grid on; axis equal;
-
-sgtitle('Proiezioni – Orbita di Trasferimento Ottimale');
-
-% --- Figura 3: Posizione vs tempo ---
-figure('Name', 'Posizione vs tempo', 'NumberTitle', 'off');
-t_min = t_vec / 60; % conversione in minuti per leggibilità
-
-subplot(3,1,1);
-plot(t_min, x_traj, 'b-', 'LineWidth', 1.5);
-xlabel('Tempo [min]'); ylabel('x [m]');
-title('Componente x'); grid on;
-
-subplot(3,1,2);
-plot(t_min, y_traj, 'r-', 'LineWidth', 1.5);
-xlabel('Tempo [min]'); ylabel('y [m]');
-title('Componente y'); grid on;
-
-subplot(3,1,3);
-plot(t_min, z_traj, 'm-', 'LineWidth', 1.5);
-xlabel('Tempo [min]'); ylabel('z [m]');
-title('Componente z'); grid on;
-
-sgtitle('Evoluzione Temporale della Posizione Relativa');
-
+view(35, 25);
 %% ----------------------- Definizione Funzioni ---------------------------
 % Struttura contenente dati del problema
 function proximityP = proximity_parameters()
