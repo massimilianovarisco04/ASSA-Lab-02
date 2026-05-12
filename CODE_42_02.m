@@ -183,6 +183,15 @@ x_vect=real(x(t_vect, coeff_curr));
 y_vect=real(y(t_vect, coeff_curr));
 z_vect=real(z(t_vect,coeff_curr)); %real assicura che la parte immaginaria venga messa a zero, essendo molto molto piccola
 
+if k==1
+    Ax=x_vect;
+    Ay=y_vect;
+    Az=z_vect;
+elseif k==4
+    Dx=x_vect;
+    Dy=y_vect;
+    Dz=z_vect;
+end
 [y]=initial(sys, x0(:,k).*10^3, t_vect);
 
 figure('Name',['Comparison analityc vs non linear ', scenari(k)]);
@@ -210,10 +219,9 @@ end
 
 % 1. Impostazioni del problema
 scenario_idx = 4; % Scegliamo lo Scenario D 
-scenario_per_obiettivo = xx(:,1); %bisogna cambiarlo implementando il modello lineare anche qua
 x0_start = x0(:, scenario_idx) * 10^3; % Stato iniziale in metri [x; vx; y; vy; z; vz]
 t_transfer = proximityP.T ; % Tempo di trasferimento (es. mezza orbita)
-target_pos = [scenario_per_obiettivo(1); scenario_per_obiettivo(3); scenario_per_obiettivo(5)]; % Obiettivo: origine (posizione relativa zero)
+target_pos = [Ax(1:t_transfer); Ay(1:t_transfer); Az(1:t_transfer)]; % Obiettivo: origine (posizione relativa zero)
 
 % 2. Definizione delle variabili decisionali
 % Cerchiamo le 3 componenti dell'impulso iniziale: u = [dv1x, dv1y, dv1z]
@@ -301,6 +309,23 @@ end
 pos_start = [x_traj(1);   y_traj(1);   z_traj(1)];
 pos_end   = [x_traj(end); y_traj(end); z_traj(end)];
 
+% ── 5. Propagazione arco di trasferimento ────────────────────────────────
+x0_D_plus           = x0_start;
+x0_D_plus([2,4,6])  = x0_D_plus([2,4,6]) + u_opt(:);
+coeff_T             = S \ x0_D_plus;
+
+t_vec = linspace(0, t_transfer, 1000);
+x_T = zeros(size(t_vec));
+y_T = x_T;  z_T = x_T;
+
+for k = 1:length(t_vec)
+    tk    = t_vec(k);
+    x_T(k) = real(coeff_T(1)*exp(1i*n*tk) + coeff_T(2)*exp(-1i*n*tk) + 2*(coeff_T(4)/n));
+    y_T(k) = real(coeff_T(3) - 3*coeff_T(4)*tk ...
+               + 2*1i*(coeff_T(1)*exp(1i*n*tk) - coeff_T(2)*exp(-1i*n*tk)));
+    z_T(k) = real(coeff_T(5)*exp(1i*n*tk) + coeff_T(6)*exp(-1i*n*tk));
+end
+
 % ── 7. PLOT ──────────────────────────────────────────────────────────────────
 
 % --- Figura 1: Orbita 3D ---
@@ -369,6 +394,35 @@ xlabel('Tempo [min]'); ylabel('z [m]');
 title('Componente z'); grid on;
 
 sgtitle('Evoluzione Temporale della Posizione Relativa');
+
+col_A = [0.00, 0.45, 0.74];   % blu
+col_D = [0.85, 0.33, 0.10];   % arancio-rosso
+col_T = [0.47, 0.67, 0.19];   % verde
+
+% --- Figura 1: 3D completo ---
+figure('Name','D→A: Vista 3D','NumberTitle','off');
+
+plot3(Ax, Ay, Az, '--', 'Color', col_A, ...
+      'LineWidth', 1.5, 'DisplayName', 'Orbita A');
+hold on;
+plot3(Dx, Dy, Dz, '--', 'Color', col_D, ...
+      'LineWidth', 1.5, 'DisplayName', 'Orbita D');
+plot3(x_T, y_T, z_T, '-', 'Color', col_T, ...
+      'LineWidth', 2.5, 'DisplayName', 'Arco trasferimento');
+
+% Punti notevoli
+plot3(Dx(1), Dy(1), Dz(1), 'o', ...
+      'Color', col_D, 'MarkerSize',10, 'MarkerFaceColor', col_D, ...
+      'DisplayName', 'Partenza D (dv1)');
+plot3(x_T(end), y_T(end), z_T(end), 's', ...
+      'Color', col_T, 'MarkerSize',10, 'MarkerFaceColor', col_T, ...
+      'DisplayName', 'Aggancio su A (dv2)');
+plot3(0, 0, 0, 'k*', 'MarkerSize',14, 'LineWidth',2, ...
+      'DisplayName', 'Chief (origine)');
+
+xlabel('x [m]'); ylabel('y [m]'); zlabel('z [m]');
+title('Trasferimento Ottimale D \rightarrow A (3D)');
+legend('Location','best'); grid on; axis equal; view(35,25);
 
 
 %% ----------------------- Definizione Funzioni ---------------------------
