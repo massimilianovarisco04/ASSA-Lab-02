@@ -220,7 +220,8 @@ target_pos = [scenario_per_obiettivo(1); scenario_per_obiettivo(3); scenario_per
 u0 = [2; 2; 2]; % Punto di partenza per l'ottimizzatore (m/s), a caso
 
 % 3. Opzioni dell'algoritmo fmincon
-options = optimoptions('fmincon', 'Display', 'iter-detailed', 'Algorithm', 'interior-point', 'OptimalityTolerance', 1e-9);
+options = optimoptions('fmincon', 'Display', 'iter-detailed', ...
+    'Algorithm', 'interior-point', 'OptimalityTolerance', 1e-9);
 
 % 4. Chiamata a fmincon
 % La funzione obiettivo minimizza la somma dei moduli dei due impulsi (partenza + arrivo)
