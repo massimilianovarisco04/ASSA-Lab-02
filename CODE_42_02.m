@@ -218,14 +218,17 @@ end
 % In questa sezione cerchiamo l'impulso ottimale DeltaV1 per arrivare al target
 
 % 1. Impostazioni del problema
-scenario_idx = 4; % Scegliamo lo Scenario D 
+scenario_idx = 4;                      % Scegliamo lo Scenario D 
 x0_start = x0(:, scenario_idx) * 10^3; % Stato iniziale in metri [x; vx; y; vy; z; vz]
-t_transfer = proximityP.T ; % Tempo di trasferimento (es. mezza orbita)
-target_pos = [Ax(1:t_transfer); Ay(1:t_transfer); Az(1:t_transfer)]; % Obiettivo: origine (posizione relativa zero)
+t_transfer = proximityP.T ;            % Tempo di trasferimento (un'orbita)
+% è giusto un'orbita, siccome è il massimo tempo disponibile?
+target_pos = [Ax(1:t_transfer); Ay(1:t_transfer); Az(1:t_transfer)]; % Obiettivo: un punto sull'orbita di A 
+
 
 % 2. Definizione delle variabili decisionali
 % Cerchiamo le 3 componenti dell'impulso iniziale: u = [dv1x, dv1y, dv1z]
-u0 = [2; 2; 2]; % Punto di partenza per l'ottimizzatore (m/s), a caso
+u0 = [2; 2; 2]; % Punto di partenza per l'ottimizzatore (m/s), A CAZZO 
+% Fare algoritmo per cercare la guess-iniziale perfetta
 
 % 3. Opzioni dell'algoritmo fmincon
 options = optimoptions('fmincon', 'Display', 'iter-detailed', ...
@@ -244,7 +247,6 @@ fprintf('DeltaV1 Ottimale (m/s): [%.4f, %.4f, %.4f]\n', u_opt);
 fprintf('Costo Totale (DeltaV1 + DeltaV2): %.4f m/s\n', J_min);
 
 
-
 % FUNZIONE OBIETTIVO: Minimizza il DeltaV totale (J = |dv1| + |dv2|)
 function J = objective_dv(u, x0_start, S, n, t)
     % u è il DeltaV1 applicato all'istante iniziale
@@ -253,7 +255,7 @@ function J = objective_dv(u, x0_start, S, n, t)
     % Calcoliamo dove arriveremmo applicando questo impulso
     x0_plus = x0_start;
     x0_plus([2, 4, 6]) = x0_plus([2, 4, 6]) + u(:); % Aggiungo dv1 alle velocità iniziali
-    coeff = S \ x0_plus; % Trovo i coefficienti analitici con il nuovo impulso
+    coeff = S \ x0_plus;                            % Trovo i coefficienti analitici con il nuovo impulso
 
     % Calcolo la velocità finale al tempo t (derivate delle tue formule Task 4)
     vx_f = real(1i*n*coeff(1)*exp(1i*n*t) - 1i*n*coeff(2)*exp(-1i*n*t));
@@ -278,7 +280,7 @@ function [c, ceq] = constraints_pos(u, x0_start, S, n, t, target_pos)
     xf = real(coeff(1)* exp(1i*n*t) + coeff(2)*exp(-1i*n*t) + 2*(coeff(4)/n));
     yf = real(coeff(3) - 3*coeff(4)*t + 2*1i*(coeff(1)*exp(1i*n*t) - coeff(2)*exp(-1i*n*t)));
     zf = real(coeff(5)*exp(1i*n*t) + coeff(6)*exp(-1i*n*t));
-
+    % Rivedere un po i vincoli con quelli dati dal dozio
     % Vincolo di uguaglianza: Posizione finale - Target = 0
     ceq = [xf; yf; zf] - target_pos; 
     c = []; % Nessun vincolo di disuguaglianza
@@ -316,13 +318,13 @@ coeff_T             = S \ x0_D_plus;
 
 t_vec = linspace(0, t_transfer, 1000);
 x_T = zeros(size(t_vec));
-y_T = x_T;  z_T = x_T;
+y_T = x_T;  
+z_T = x_T;
 
 for k = 1:length(t_vec)
     tk    = t_vec(k);
     x_T(k) = real(coeff_T(1)*exp(1i*n*tk) + coeff_T(2)*exp(-1i*n*tk) + 2*(coeff_T(4)/n));
-    y_T(k) = real(coeff_T(3) - 3*coeff_T(4)*tk ...
-               + 2*1i*(coeff_T(1)*exp(1i*n*tk) - coeff_T(2)*exp(-1i*n*tk)));
+    y_T(k) = real(coeff_T(3) - 3*coeff_T(4)*tk + 2*1i*(coeff_T(1)*exp(1i*n*tk) - coeff_T(2)*exp(-1i*n*tk)));
     z_T(k) = real(coeff_T(5)*exp(1i*n*tk) + coeff_T(6)*exp(-1i*n*tk));
 end
 
