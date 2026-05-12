@@ -210,9 +210,10 @@ end
 
 % 1. Impostazioni del problema
 scenario_idx = 4; % Scegliamo lo Scenario D 
+scenario_per_obiettivo = xx(:,1);
 x0_start = x0(:, scenario_idx) * 10^3; % Stato iniziale in metri [x; vx; y; vy; z; vz]
 t_transfer = proximityP.T ; % Tempo di trasferimento (es. mezza orbita)
-target_pos = [0; 0; 0]; % Obiettivo: origine (posizione relativa zero)
+target_pos = [scenario_per_obiettivo(1); scenario_per_obiettivo(3); scenario_per_obiettivo(5)]; % Obiettivo: origine (posizione relativa zero)
 
 % 2. Definizione delle variabili decisionali
 % Cerchiamo le 3 componenti dell'impulso iniziale: u = [dv1x, dv1y, dv1z]
