@@ -204,14 +204,14 @@ end
 %% Task 5
 % 5.1 - Linear Optimization and Nonlinear Verification
 % Homing : avviciniamo il chaser all'obbiettivo ponendolo su un'orbita di
-% avvicinamento
+% avvicinamento-
 % Partiamo dalle condizioni iniziali D, con il moto che inizia a t = 0
 % In questa sezione cerchiamo l'impulso ottimale DeltaV1 per arrivare al target
 
 % 1. Impostazioni del problema
 scenario_idx = 4; % Scegliamo lo Scenario D 
 x0_start = x0(:, scenario_idx) * 10^3; % Stato iniziale in metri [x; vx; y; vy; z; vz]
-t_transfer = proximityP.T ; % Tempo di trasferimento (es. mezza orbita)
+t_transfer = proximityP.T ; % Tempo di trasferimento (un'orbita)
 target_pos = [0; 0; 0]; % Obiettivo: origine (posizione relativa zero)
 
 % 2. Definizione delle variabili decisionali
@@ -219,7 +219,6 @@ target_pos = [0; 0; 0]; % Obiettivo: origine (posizione relativa zero)
 u0 = [2; 2; 2]; % Punto di partenza per l'ottimizzatore (m/s)
 
 % 3. Opzioni dell'algoritmo fmincon
-% Usiamo 'sqp' perché è molto robusto per problemi di meccanica orbitale
 options = optimoptions('fmincon', 'Display', 'iter-detailed', 'Algorithm', 'interior-point', 'OptimalityTolerance', 1e-9);
 
 % 4. Chiamata a fmincon
