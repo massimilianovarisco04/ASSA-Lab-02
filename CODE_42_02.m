@@ -209,102 +209,65 @@ end
 % In questa sezione cerchiamo l'impulso ottimale DeltaV1 per arrivare al target
 
 % 1. Impostazioni del problema
-scenario_idx = 4; % Scegliamo lo Scenario D 
-scenario_target = xx(:,1);
-x0_start = x0(:, scenario_idx) * 10^3; % Stato iniziale in metri [x; vx; y; vy; z; vz]
-t_transfer = proximityP.T ; % Tempo di trasferimento (un'orbita)
-target_pos = [scenario_target(1); scenario_target(3); scenario_target(5)]; % Obiettivo: origine (posizione relativa zero)
+idx_D = 4;  idx_A = 1;
+x0_D  = x0(:, idx_D) * 1e3;   % condizioni iniziali orbita D [m, m/s]
+x0_A  = x0(:, idx_A) * 1e3;   % condizioni iniziali orbita A [m, m/s]
 
-% 2. Definizione delle variabili decisionali
-% Cerchiamo le 3 componenti dell'impulso iniziale: u = [dv1x, dv1y, dv1z]
-u0 = [2; 2; 2]; % Punto di partenza per l'ottimizzatore (m/s)
+t_transfer = T;                % tempo di trasferimento = 1 periodo
 
-% 3. Opzioni dell'algoritmo fmincon
-% Usiamo 'sqp' perché è molto robusto per problemi di meccanica orbitale
-options = optimoptions('fmincon', 'Display', 'iter-detailed', 'Algorithm', 'interior-point', 'OptimalityTolerance', 1e-9);
+% Propagazione ANALITICA di A fino a t_transfer
+% (serve il target di posizione E velocità all'arrivo)
+coeff_A = S \ x0_A;
 
-% 4. Chiamata a fmincon
-% La funzione obiettivo minimizza la somma dei moduli dei due impulsi (partenza + arrivo)
-[u_opt, J_min] = fmincon(@(u) objective_dv(u, x0_start, S, n, t_transfer), ...
-                         u0, [], [], [], [], [], [], ...
-                         @(u) constraints_pos(u, x0_start, S, n, t_transfer, target_pos), ...
-                         options);
+xA_f  = real(coeff_A(1)*exp(1i*n*t_transfer) + coeff_A(2)*exp(-1i*n*t_transfer) ...
+           + 2*(coeff_A(4)/n));
+yA_f  = real(coeff_A(3) - 3*coeff_A(4)*t_transfer ...
+           + 2*1i*(coeff_A(1)*exp(1i*n*t_transfer) - coeff_A(2)*exp(-1i*n*t_transfer)));
+zA_f  = real(coeff_A(5)*exp(1i*n*t_transfer) + coeff_A(6)*exp(-1i*n*t_transfer));
 
-% 5. Visualizzazione dei risultati
-fprintf('\n--- RISULTATI OTTIMIZZAZIONE TASK 5 ---\n');
-fprintf('DeltaV1 Ottimale (m/s): [%.4f, %.4f, %.4f]\n', u_opt);
-fprintf('Costo Totale (DeltaV1 + DeltaV2): %.4f m/s\n', J_min);
+vxA_f = real( 1i*n*coeff_A(1)*exp(1i*n*t_transfer) - 1i*n*coeff_A(2)*exp(-1i*n*t_transfer));
+vyA_f = real(-3*coeff_A(4) - 2*n*coeff_A(1)*exp(1i*n*t_transfer) ...
+           - 2*n*coeff_A(2)*exp(-1i*n*t_transfer));
+vzA_f = real( 1i*n*coeff_A(5)*exp(1i*n*t_transfer) - 1i*n*coeff_A(6)*exp(-1i*n*t_transfer));
 
+target_pos = [xA_f; yA_f; zA_f];
+target_vel = [vxA_f; vyA_f; vzA_f];
 
+% ── 3. fmincon ───────────────────────────────────────────────────────────
+u0      = [2; 2; 2];
+options = optimoptions('fmincon', ...
+    'Display',              'iter-detailed', ...
+    'Algorithm',            'interior-point', ...
+    'OptimalityTolerance',  1e-9);
 
-% FUNZIONE OBIETTIVO: Minimizza il DeltaV totale (J = |dv1| + |dv2|)
-function J = objective_dv(u, x0_start, S, n, t)
-    % u è il DeltaV1 applicato all'istante iniziale
-    dv1_mag = norm(u);
-    
-    % Calcoliamo dove arriveremmo applicando questo impulso
-    x0_plus = x0_start;
-    x0_plus([2, 4, 6]) = x0_plus([2, 4, 6]) + u(:); % Aggiungo dv1 alle velocità iniziali
-    coeff = S \ x0_plus; % Trovo i coefficienti analitici con il nuovo impulso
-    
-    % Calcolo la velocità finale al tempo t (derivate delle tue formule Task 4)
-    vx_f = real(1i*n*coeff(1)*exp(1i*n*t) - 1i*n*coeff(2)*exp(-1i*n*t));
-    vy_f = real(-3*coeff(4) - 2*n*coeff(1)*exp(1i*n*t) - 2*n*coeff(2)*exp(-1i*n*t));
-    vz_f = real(1i*n*coeff(5)*exp(1i*n*t) - 1i*n*coeff(6)*exp(-1i*n*t));
-    
-    % Per il rendezvous, all'arrivo dobbiamo azzerare la velocità relativa
-    % Quindi dv2 è pari al modulo della velocità residua
-    dv2_mag = norm([vx_f; vy_f; vz_f]);
-    
-    J = dv1_mag + dv2_mag;
-end
+[u_opt, J_min] = fmincon( ...
+    @(u) objective_transfer(u, x0_D, S, n, t_transfer, target_vel), ...
+    u0, [], [], [], [], [], [], ...
+    @(u) constraints_transfer(u, x0_D, S, n, t_transfer, target_pos), ...
+    options);
 
-% VINCOLI: Garantisce che al tempo t_transfer la posizione sia quella target
-function [c, ceq] = constraints_pos(u, x0_start, S, n, t, target_pos)
-    % Calcolo traiettoria analitica con l'impulso scelto dall'ottimizzatore
-    x0_plus = x0_start;
-    x0_plus([2, 4, 6]) = x0_plus([2, 4, 6]) + u(:);
-    coeff = S \ x0_plus;
-    
-    % Posizione calcolata con le tue formule analitiche (Task 4)
-    xf = real(coeff(1)* exp(1i*n*t) + coeff(2)*exp(-1i*n*t) + 2*(coeff(4)/n));
-    yf = real(coeff(3) - 3*coeff(4)*t + 2*1i*(coeff(1)*exp(1i*n*t) - coeff(2)*exp(-1i*n*t)));
-    zf = real(coeff(5)*exp(1i*n*t) + coeff(6)*exp(-1i*n*t));
-    
-    % Vincolo di uguaglianza: Posizione finale - Target = 0
-    ceq = [xf; yf; zf] - target_pos; 
-    c = []; % Nessun vincolo di disuguaglianza
-end
+% ── 4. Risultati a schermo ────────────────────────────────────────────────
+fprintf('\n=== TRASFERIMENTO D → A ===\n');
+fprintf('DeltaV1      [m/s]: [%+.4f, %+.4f, %+.4f]\n', u_opt);
+fprintf('|dv1|        [m/s]: %.4f\n', norm(u_opt));
+fprintf('Costo totale [m/s]: %.4f\n', J_min);
 
-% 6. Calcolo traiettoria ottimale per il plot
-% Applico l'impulso ottimale alle condizioni iniziali
-x0_plus = x0_start;
-x0_plus([2, 4, 6]) = x0_plus([2, 4, 6]) + u_opt(:);
-coeff_opt = S \ x0_plus;
+% ── 5. Propagazione arco di trasferimento ────────────────────────────────
+x0_D_plus           = x0_D;
+x0_D_plus([2,4,6])  = x0_D_plus([2,4,6]) + u_opt(:);
+coeff_T             = S \ x0_D_plus;
 
-% Vettore temporale per la propagazione
 t_vec = linspace(0, t_transfer, 1000);
-
-% Allocazione
-x_traj = zeros(size(t_vec));
-y_traj = zeros(size(t_vec));
-z_traj = zeros(size(t_vec));
+x_T = zeros(size(t_vec));
+y_T = x_T;  z_T = x_T;
 
 for k = 1:length(t_vec)
-    t_k = t_vec(k);
-    x_traj(k) = real(coeff_opt(1)*exp(1i*n*t_k) + coeff_opt(2)*exp(-1i*n*t_k) + 2*(coeff_opt(4)/n));
-    y_traj(k) = real(coeff_opt(3) - 3*coeff_opt(4)*t_k + 2*1i*(coeff_opt(1)*exp(1i*n*t_k) - coeff_opt(2)*exp(-1i*n*t_k)));
-    z_traj(k) = real(coeff_opt(5)*exp(1i*n*t_k) + coeff_opt(6)*exp(-1i*n*t_k));
+    tk    = t_vec(k);
+    x_T(k) = real(coeff_T(1)*exp(1i*n*tk) + coeff_T(2)*exp(-1i*n*tk) + 2*(coeff_T(4)/n));
+    y_T(k) = real(coeff_T(3) - 3*coeff_T(4)*tk ...
+               + 2*1i*(coeff_T(1)*exp(1i*n*tk) - coeff_T(2)*exp(-1i*n*tk)));
+    z_T(k) = real(coeff_T(5)*exp(1i*n*tk) + coeff_T(6)*exp(-1i*n*tk));
 end
-
-% Punto di partenza e di arrivo
-pos_start = [x_traj(1);   y_traj(1);   z_traj(1)];
-pos_end   = [x_traj(end); y_traj(end); z_traj(end)];
-
-% ── 7. PLOT ──────────────────────────────────────────────────────────────────
-
-
-traj = struct(); % conterrà i campi A e D
 
 for i = 1:size(x0, 2)
     ODE_obj            = ode;
@@ -325,26 +288,124 @@ for i = 1:size(x0, 2)
     % ... il resto del tuo loop rimane identico ...
 end
 
-figure('Name', 'Orbite A e D – Confronto 3D', 'NumberTitle', 'off');
+% ── 6. PLOT ───────────────────────────────────────────────────────────────
 
-plot3(traj.A.x, traj.A.y, traj.A.z, 'b-', 'LineWidth', 2, 'DisplayName', 'Orbita A');
+% Colori
+col_A = [0.00, 0.45, 0.74];   % blu
+col_D = [0.85, 0.33, 0.10];   % arancio-rosso
+col_T = [0.47, 0.67, 0.19];   % verde
+
+% --- Figura 1: 3D completo ---
+figure('Name','D→A: Vista 3D','NumberTitle','off');
+
+plot3(traj.A.x, traj.A.y, traj.A.z, '--', 'Color', col_A, ...
+      'LineWidth', 1.5, 'DisplayName', 'Orbita A');
 hold on;
-plot3(traj.D.x, traj.D.y, traj.D.z, 'r-', 'LineWidth', 2, 'DisplayName', 'Orbita D');
+plot3(traj.D.x, traj.D.y, traj.D.z, '--', 'Color', col_D, ...
+      'LineWidth', 1.5, 'DisplayName', 'Orbita D');
+plot3(x_T, y_T, z_T, '-', 'Color', col_T, ...
+      'LineWidth', 2.5, 'DisplayName', 'Arco trasferimento');
 
-% Punti di partenza
-plot3(traj.A.x(1), traj.A.y(1), traj.A.z(1), 'bo', ...
-      'MarkerSize', 10, 'MarkerFaceColor', 'b', 'DisplayName', 'Start A');
-plot3(traj.D.x(1), traj.D.y(1), traj.D.z(1), 'ro', ...
-      'MarkerSize', 10, 'MarkerFaceColor', 'r', 'DisplayName', 'Start D');
-
-% Origine (target / Chief)
-plot3(0, 0, 0, 'k*', 'MarkerSize', 14, 'LineWidth', 2, 'DisplayName', 'Chief (origine)');
+% Punti notevoli
+plot3(traj.D.x(1), traj.D.y(1), traj.D.z(1), 'o', ...
+      'Color', col_D, 'MarkerSize',10, 'MarkerFaceColor', col_D, ...
+      'DisplayName', 'Partenza D (dv1)');
+plot3(x_T(end), y_T(end), z_T(end), 's', ...
+      'Color', col_T, 'MarkerSize',10, 'MarkerFaceColor', col_T, ...
+      'DisplayName', 'Aggancio su A (dv2)');
+plot3(0, 0, 0, 'k*', 'MarkerSize',14, 'LineWidth',2, ...
+      'DisplayName', 'Chief (origine)');
 
 xlabel('x [m]'); ylabel('y [m]'); zlabel('z [m]');
-title('Orbite Relative – Scenari A e D');
-legend('Location', 'best');
-grid on; axis equal;
-view(35, 25);
+title('Trasferimento Ottimale D \rightarrow A (3D)');
+legend('Location','best'); grid on; axis equal; view(35,25);
+
+% --- Figura 2: Proiezioni affiancate ---
+figure('Name','D→A: Proiezioni','NumberTitle','off');
+
+% Dati per il loop sui piani
+plans = { {traj.A.x, traj.A.y, traj.D.x, traj.D.y, x_T, y_T, 'x [m]','y [m]','Piano x-y'}, ...
+          {traj.A.x, traj.A.z, traj.D.x, traj.D.z, x_T, z_T, 'x [m]','z [m]','Piano x-z'}, ...
+          {traj.A.y, traj.A.z, traj.D.y, traj.D.z, y_T, z_T, 'y [m]','z [m]','Piano y-z'} };
+
+
+for p = 1:3
+    pl = plans{p};
+    subplot(1,3,p);
+    plot(pl{1}, pl{2}, '--', 'Color', col_A, 'LineWidth',1.5); hold on;
+    plot(pl{3}, pl{4}, '--', 'Color', col_D, 'LineWidth',1.5);
+    plot(pl{5}, pl{6}, '-',  'Color', col_T, 'LineWidth',2.5);
+    plot(pl{3}(1), pl{4}(1), 'o','Color',col_D,'MarkerSize',8,'MarkerFaceColor',col_D);
+    plot(pl{5}(end),pl{6}(end),'s','Color',col_T,'MarkerSize',8,'MarkerFaceColor',col_T);
+    plot(0, 0, 'k*','MarkerSize',12,'LineWidth',2);
+    xlabel(pl{7}); ylabel(pl{8}); title(pl{9});
+    grid on; axis equal;
+end
+legend('Orbita A','Orbita D','Trasferimento','Partenza D','Aggancio','Chief', ...
+       'Location','best');
+sgtitle('Proiezioni – Trasferimento D \rightarrow A');
+
+% --- Figura 3: Posizione vs tempo ---
+figure('Name','D→A: Posizione nel tempo','NumberTitle','off');
+t_min = t_vec / 60;
+
+comps   = {'x','y','z'};
+data_T_all = [x_T; y_T; z_T];
+
+for p = 1:3
+    subplot(3,1,p);
+    plot(t_min, data_T_all(p,:), '-', 'Color', col_T, 'LineWidth', 2);
+    yline(target_pos(p), '--k', 'LineWidth', 1.2, ...
+          'Label', sprintf('Target %s = %.1f m', comps{p}, target_pos(p)));
+    xlabel('Tempo [min]');
+    ylabel(sprintf('%s [m]', comps{p}));
+    title(sprintf('Componente %s – Arco di trasferimento', comps{p}));
+    grid on;
+end
+sgtitle('Evoluzione Temporale – Trasferimento D \rightarrow A');
+
+% =========================================================================
+% FUNZIONI LOCALI
+% =========================================================================
+
+function J = objective_transfer(u, x0_D, S, n, t, target_vel)
+    dv1_mag = norm(u);
+    x0_plus = x0_D;
+    x0_plus([2,4,6]) = x0_plus([2,4,6]) + u(:);
+    coeff = S \ x0_plus;
+
+    vx_f = real( 1i*n*coeff(1)*exp(1i*n*t) - 1i*n*coeff(2)*exp(-1i*n*t));
+    vy_f = real(-3*coeff(4) - 2*n*coeff(1)*exp(1i*n*t) - 2*n*coeff(2)*exp(-1i*n*t));
+    vz_f = real( 1i*n*coeff(5)*exp(1i*n*t) - 1i*n*coeff(6)*exp(-1i*n*t));
+
+    % dv2 = scarto rispetto alla velocità di A all'arrivo
+    dv2_mag = norm([vx_f; vy_f; vz_f] - target_vel);
+    J = dv1_mag + dv2_mag;
+end
+
+function [c, ceq] = constraints_transfer(u, x0_D, S, n, t, target_pos)
+    x0_plus = x0_D;
+    x0_plus([2,4,6]) = x0_plus([2,4,6]) + u(:);
+    coeff = S \ x0_plus;
+
+    xf = real(coeff(1)*exp(1i*n*t) + coeff(2)*exp(-1i*n*t) + 2*(coeff(4)/n));
+    yf = real(coeff(3) - 3*coeff(4)*t ...
+            + 2*1i*(coeff(1)*exp(1i*n*t) - coeff(2)*exp(-1i*n*t)));
+    zf = real(coeff(5)*exp(1i*n*t) + coeff(6)*exp(-1i*n*t));
+
+    ceq = [xf; yf; zf] - target_pos;
+    c   = [];
+end
+
+
+% ── 7. PLOT ──────────────────────────────────────────────────────────────────
+
+
+traj = struct(); % conterrà i campi A e D
+
+
+
+
 %% ----------------------- Definizione Funzioni ---------------------------
 % Struttura contenente dati del problema
 function proximityP = proximity_parameters()
