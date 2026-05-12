@@ -201,7 +201,173 @@ figure('Name',['Comparison analityc vs non linear ', scenari(k)]);
 
 end
 
+%% Task 5
+% 5.1 - Linear Optimization and Nonlinear Verification
+% Homing : avviciniamo il chaser all'obbiettivo ponendolo su un'orbita di
+% avvicinamento
+% Partiamo dalle condizioni iniziali D, con il moto che inizia a t = 0
+% In questa sezione cerchiamo l'impulso ottimale DeltaV1 per arrivare al target
 
+% 1. Impostazioni del problema
+scenario_idx = 4; % Scegliamo lo Scenario D 
+x0_start = x0(:, scenario_idx) * 10^3; % Stato iniziale in metri [x; vx; y; vy; z; vz]
+t_transfer = proximityP.T ; % Tempo di trasferimento (es. mezza orbita)
+target_pos = [0; 0; 0]; % Obiettivo: origine (posizione relativa zero)
+
+% 2. Definizione delle variabili decisionali
+% Cerchiamo le 3 componenti dell'impulso iniziale: u = [dv1x, dv1y, dv1z]
+u0 = [2; 2; 2]; % Punto di partenza per l'ottimizzatore (m/s)
+
+% 3. Opzioni dell'algoritmo fmincon
+% Usiamo 'sqp' perché è molto robusto per problemi di meccanica orbitale
+options = optimoptions('fmincon', 'Display', 'iter-detailed', 'Algorithm', 'interior-point', 'OptimalityTolerance', 1e-9);
+
+% 4. Chiamata a fmincon
+% La funzione obiettivo minimizza la somma dei moduli dei due impulsi (partenza + arrivo)
+[u_opt, J_min] = fmincon(@(u) objective_dv(u, x0_start, S, n, t_transfer), ...
+                         u0, [], [], [], [], [], [], ...
+                         @(u) constraints_pos(u, x0_start, S, n, t_transfer, target_pos), ...
+                         options);
+
+% 5. Visualizzazione dei risultati
+fprintf('\n--- RISULTATI OTTIMIZZAZIONE TASK 5 ---\n');
+fprintf('DeltaV1 Ottimale (m/s): [%.4f, %.4f, %.4f]\n', u_opt);
+fprintf('Costo Totale (DeltaV1 + DeltaV2): %.4f m/s\n', J_min);
+
+
+
+% FUNZIONE OBIETTIVO: Minimizza il DeltaV totale (J = |dv1| + |dv2|)
+function J = objective_dv(u, x0_start, S, n, t)
+    % u è il DeltaV1 applicato all'istante iniziale
+    dv1_mag = norm(u);
+    
+    % Calcoliamo dove arriveremmo applicando questo impulso
+    x0_plus = x0_start;
+    x0_plus([2, 4, 6]) = x0_plus([2, 4, 6]) + u(:); % Aggiungo dv1 alle velocità iniziali
+    coeff = S \ x0_plus; % Trovo i coefficienti analitici con il nuovo impulso
+    
+    % Calcolo la velocità finale al tempo t (derivate delle tue formule Task 4)
+    vx_f = real(1i*n*coeff(1)*exp(1i*n*t) - 1i*n*coeff(2)*exp(-1i*n*t));
+    vy_f = real(-3*coeff(4) - 2*n*coeff(1)*exp(1i*n*t) - 2*n*coeff(2)*exp(-1i*n*t));
+    vz_f = real(1i*n*coeff(5)*exp(1i*n*t) - 1i*n*coeff(6)*exp(-1i*n*t));
+    
+    % Per il rendezvous, all'arrivo dobbiamo azzerare la velocità relativa
+    % Quindi dv2 è pari al modulo della velocità residua
+    dv2_mag = norm([vx_f; vy_f; vz_f]);
+    
+    J = dv1_mag + dv2_mag;
+end
+
+% VINCOLI: Garantisce che al tempo t_transfer la posizione sia quella target
+function [c, ceq] = constraints_pos(u, x0_start, S, n, t, target_pos)
+    % Calcolo traiettoria analitica con l'impulso scelto dall'ottimizzatore
+    x0_plus = x0_start;
+    x0_plus([2, 4, 6]) = x0_plus([2, 4, 6]) + u(:);
+    coeff = S \ x0_plus;
+    
+    % Posizione calcolata con le tue formule analitiche (Task 4)
+    xf = real(coeff(1)* exp(1i*n*t) + coeff(2)*exp(-1i*n*t) + 2*(coeff(4)/n));
+    yf = real(coeff(3) - 3*coeff(4)*t + 2*1i*(coeff(1)*exp(1i*n*t) - coeff(2)*exp(-1i*n*t)));
+    zf = real(coeff(5)*exp(1i*n*t) + coeff(6)*exp(-1i*n*t));
+    
+    % Vincolo di uguaglianza: Posizione finale - Target = 0
+    ceq = [xf; yf; zf] - target_pos; 
+    c = []; % Nessun vincolo di disuguaglianza
+end
+
+% 6. Calcolo traiettoria ottimale per il plot
+% Applico l'impulso ottimale alle condizioni iniziali
+x0_plus = x0_start;
+x0_plus([2, 4, 6]) = x0_plus([2, 4, 6]) + u_opt(:);
+coeff_opt = S \ x0_plus;
+
+% Vettore temporale per la propagazione
+t_vec = linspace(0, t_transfer, 1000);
+
+% Allocazione
+x_traj = zeros(size(t_vec));
+y_traj = zeros(size(t_vec));
+z_traj = zeros(size(t_vec));
+
+for k = 1:length(t_vec)
+    t_k = t_vec(k);
+    x_traj(k) = real(coeff_opt(1)*exp(1i*n*t_k) + coeff_opt(2)*exp(-1i*n*t_k) + 2*(coeff_opt(4)/n));
+    y_traj(k) = real(coeff_opt(3) - 3*coeff_opt(4)*t_k + 2*1i*(coeff_opt(1)*exp(1i*n*t_k) - coeff_opt(2)*exp(-1i*n*t_k)));
+    z_traj(k) = real(coeff_opt(5)*exp(1i*n*t_k) + coeff_opt(6)*exp(-1i*n*t_k));
+end
+
+% Punto di partenza e di arrivo
+pos_start = [x_traj(1);   y_traj(1);   z_traj(1)];
+pos_end   = [x_traj(end); y_traj(end); z_traj(end)];
+
+% ── 7. PLOT ──────────────────────────────────────────────────────────────────
+
+% --- Figura 1: Orbita 3D ---
+figure('Name', 'Orbita di trasferimento 3D', 'NumberTitle', 'off');
+plot3(x_traj, y_traj, z_traj, 'b-', 'LineWidth', 1.8); hold on;
+plot3(pos_start(1), pos_start(2), pos_start(3), 'go', ...
+      'MarkerSize', 10, 'MarkerFaceColor', 'g', 'DisplayName', 'Start');
+plot3(pos_end(1),   pos_end(2),   pos_end(3),   'rs', ...
+      'MarkerSize', 10, 'MarkerFaceColor', 'r', 'DisplayName', 'Arrivo');
+plot3(target_pos(1), target_pos(2), target_pos(3), 'k*', ...
+      'MarkerSize', 14, 'LineWidth', 2,              'DisplayName', 'Target (origine)');
+xlabel('x [m]'); ylabel('y [m]'); zlabel('z [m]');
+title('Orbita di Trasferimento – Frame LVLH (3D)');
+legend('Traiettoria', 'Start', 'Arrivo', 'Target', 'Location', 'best');
+grid on; axis equal; view(35, 25);
+
+% --- Figura 2: Proiezioni 2D (x-y, x-z, y-z) ---
+figure('Name', 'Proiezioni orbita', 'NumberTitle', 'off');
+
+subplot(1,3,1);
+plot(x_traj, y_traj, 'b-', 'LineWidth', 1.5); hold on;
+plot(pos_start(1), pos_start(2), 'go', 'MarkerSize', 8, 'MarkerFaceColor', 'g');
+plot(pos_end(1),   pos_end(2),   'rs', 'MarkerSize', 8, 'MarkerFaceColor', 'r');
+plot(target_pos(1), target_pos(2), 'k*', 'MarkerSize', 12, 'LineWidth', 2);
+xlabel('x [m]'); ylabel('y [m]'); title('Piano x-y');
+legend('Traiettoria','Start','Arrivo','Target','Location','best');
+grid on; axis equal;
+
+subplot(1,3,2);
+plot(x_traj, z_traj, 'b-', 'LineWidth', 1.5); hold on;
+plot(pos_start(1), pos_start(3), 'go', 'MarkerSize', 8, 'MarkerFaceColor', 'g');
+plot(pos_end(1),   pos_end(3),   'rs', 'MarkerSize', 8, 'MarkerFaceColor', 'r');
+plot(target_pos(1), target_pos(3), 'k*', 'MarkerSize', 12, 'LineWidth', 2);
+xlabel('x [m]'); ylabel('z [m]'); title('Piano x-z');
+legend('Traiettoria','Start','Arrivo','Target','Location','best');
+grid on; axis equal;
+
+subplot(1,3,3);
+plot(y_traj, z_traj, 'b-', 'LineWidth', 1.5); hold on;
+plot(pos_start(2), pos_start(3), 'go', 'MarkerSize', 8, 'MarkerFaceColor', 'g');
+plot(pos_end(2),   pos_end(3),   'rs', 'MarkerSize', 8, 'MarkerFaceColor', 'r');
+plot(target_pos(2), target_pos(3), 'k*', 'MarkerSize', 12, 'LineWidth', 2);
+xlabel('y [m]'); ylabel('z [m]'); title('Piano y-z');
+legend('Traiettoria','Start','Arrivo','Target','Location','best');
+grid on; axis equal;
+
+sgtitle('Proiezioni – Orbita di Trasferimento Ottimale');
+
+% --- Figura 3: Posizione vs tempo ---
+figure('Name', 'Posizione vs tempo', 'NumberTitle', 'off');
+t_min = t_vec / 60; % conversione in minuti per leggibilità
+
+subplot(3,1,1);
+plot(t_min, x_traj, 'b-', 'LineWidth', 1.5);
+xlabel('Tempo [min]'); ylabel('x [m]');
+title('Componente x'); grid on;
+
+subplot(3,1,2);
+plot(t_min, y_traj, 'r-', 'LineWidth', 1.5);
+xlabel('Tempo [min]'); ylabel('y [m]');
+title('Componente y'); grid on;
+
+subplot(3,1,3);
+plot(t_min, z_traj, 'm-', 'LineWidth', 1.5);
+xlabel('Tempo [min]'); ylabel('z [m]');
+title('Componente z'); grid on;
+
+sgtitle('Evoluzione Temporale della Posizione Relativa');
 
 %% ----------------------- Definizione Funzioni ---------------------------
 % Struttura contenente dati del problema
