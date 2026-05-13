@@ -225,7 +225,7 @@ xD_start = x0(:, scenario_idx) * 10^3;
 
 % Punto di partenza per l'ottimizzatore 
 % (T/2 di attesa, T/2 di volo, 0 shift di fase)
-x0_guess = [0.0001; 0.0001; 0; T/2; T/2; 0]; 
+x0_guess = [0.1; 0.1; 0; T/2; T/2; 0]; 
 
 options = optimoptions('fmincon','Algorithm', 'interior-point', 'OptimalityTolerance', 1e-9);
 
@@ -240,22 +240,45 @@ ub = [ 10;  10;  10; Inf;   T;  T];
 % 4. Chiamata fmincon
 xA_start = x0(:, 1) * 10^3; 
 coeff_A = S \ xA_start;     % Coefficienti dell'orbita bersaglio A
-i=1;
-while i<50
+J_best=inf;
+
+for i=1:10
     if i == 1
         [x_opt, J_min] = fmincon(@(u) objective_dv(u, xD_start, coeff_A, S, n), ...
                          x0_guess, [], [], [], [], lb, ub, ...
                          @(u) constraints_pos(u, xD_start, coeff_A, S, n), options);
+    %J_min è il costo totale della missione
     end
-    if  norm(x_opt(1:3)) >= norm (x0_guess(1:3)) && i > 1
-        norma  = norm(x_opt(1:3));
-        x0_guess = [rand(0,norma);x_opt(4);x_opt(5);x_opt(6)];
+    if  J_min >= norm (x0_guess(1:3)) && i > 1
+        norma  = J_min;
+        dir_casuale = randn(3, 1);
+    
+    % 2. Normalizzo il vettore dividendolo per la sua stessa norma (ora è lungo esattamente 1)
+    dir_normalizzata = dir_casuale / norm(dir_casuale);
+    
+    % 3. Ti riduce rispetto a J_min questo! quindi ottengo delle guess che
+    % in modulo sono sempre inferiori a J_MIN
+    nuovo_modulo = rand() * norma;
+    
+    % Moltiplico la direzione di raggio 1 per il nuovo modulo
+    nuovo_vettore_3d = dir_normalizzata * nuovo_modulo;
+    
+    % 4. Ricostruisco il guess iniziale concatenando le parti
+    x0_guess = [nuovo_vettore_3d; x_opt(4); x_opt(5); x_opt(6)];
 
-        [x_opt, J_min] = fmincon(@(u) objective_dv(u, xD_start, coeff_A, S, n), ...
+    [x_opt, J_min] = fmincon(@(u) objective_dv(u, xD_start, coeff_A, S, n), ...
                          x0_guess, [], [], [], [], lb, ub, ...
                          @(u) constraints_pos(u, xD_start, coeff_A, S, n), options);
     end
-     i = i + 1;
+disp(J_min);
+
+    if J_min < J_best %sta roba non succede mai dopo la prima iterazione, succede solo una volta. Questo conferma che il migliore risultato possibile, per 10 test di guess
+        %iniziali minori del deltaV totale della prima guess, è quello dato
+        %dalla prima guess. tutte queste guess sono quindi guess iniziali
+        %ottimali!
+        J_best = J_min;
+        x_best = x_opt;
+    end
 end
 
 % 5. Estrazione Risultati
