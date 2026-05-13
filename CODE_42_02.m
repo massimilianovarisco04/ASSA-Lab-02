@@ -225,10 +225,9 @@ xD_start = x0(:, scenario_idx) * 10^3;
 
 % Punto di partenza per l'ottimizzatore 
 % (T/2 di attesa, T/2 di volo, 0 shift di fase)
-x0_guess = [3; 2.5; 0; T/2; T/2; 0]; 
+x0_guess = [0.0001; 0.0001; 0; T/2; T/2; 0]; 
 
-options = optimoptions('fmincon', 'Display', 'iter-detailed', ...
-    'Algorithm', 'interior-point', 'OptimalityTolerance', 1e-9);
+options = optimoptions('fmincon','Algorithm', 'interior-point', 'OptimalityTolerance', 1e-9);
 
 % 3. Limiti (Lower e Upper Bounds)
 % dv compresi tra -10 e 10
@@ -240,10 +239,24 @@ ub = [ 10;  10;  10; Inf;   T;  T];
 
 % 4. Chiamata fmincon
 xA_start = x0(:, 1) * 10^3; 
-coeff_A = S \ xA_start; % Coefficienti dell'orbita bersaglio A
-[x_opt, J_min] = fmincon(@(u) objective_dv(u, xD_start, coeff_A, S, n), ...
+coeff_A = S \ xA_start;     % Coefficienti dell'orbita bersaglio A
+i=1;
+while i<50
+    if i == 1
+        [x_opt, J_min] = fmincon(@(u) objective_dv(u, xD_start, coeff_A, S, n), ...
                          x0_guess, [], [], [], [], lb, ub, ...
                          @(u) constraints_pos(u, xD_start, coeff_A, S, n), options);
+    end
+    if  norm(x_opt(1:3)) >= norm (x0_guess(1:3)) && i > 1
+        norma  = norm(x_opt(1:3));
+        x0_guess = [rand(0,norma);x_opt(4);x_opt(5);x_opt(6)];
+
+        [x_opt, J_min] = fmincon(@(u) objective_dv(u, xD_start, coeff_A, S, n), ...
+                         x0_guess, [], [], [], [], lb, ub, ...
+                         @(u) constraints_pos(u, xD_start, coeff_A, S, n), options);
+    end
+     i = i + 1;
+end
 
 % 5. Estrazione Risultati
 dv1_opt    = x_opt(1:3);
@@ -350,7 +363,8 @@ function xdot = proximityP_f (t,x, proximityP)
     xdot = [xdot_1, xdot_2, xdot_3, xdot_4, xdot_5, xdot_6]';
 end
 
-function J = objective_dv(u, xD_start, coeff_A, S, n) %minimizza il DV totale considerando il boost iniziale e il boost finale per entrare in traiettoria
+function J = objective_dv(u, xD_start, coeff_A, S, n) 
+%minimizza il DV totale considerando il boost iniziale e il boost finale per entrare in traiettoria
     dv1    = u(1:3);
     t_wait = u(4);
     t_tof  = u(5);
