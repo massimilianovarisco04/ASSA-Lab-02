@@ -210,55 +210,6 @@ figure('Name',['Comparison analityc vs non linear ', scenari(k)]);
 
 end
 
-% %% Task 5
-% % 5.1 - Linear Optimization and Nonlinear Verification
-% % Homing : avviciniamo il chaser all'obbiettivo ponendolo su un'orbita di
-% % avvicinamento
-% % Partiamo dalle condizioni iniziali D, con il moto che inizia a t = 0
-% % In questa sezione cerchiamo l'impulso ottimale DeltaV1 per arrivare al target
-% 
-% % 1. Impostazioni del problema
-% scenario_idx = 4;            % Scegliamo lo Scenario D 
-% T=proximityP.T;
-% t_transfer = T;       % Tempo di trasferimento massimo
-% xD_start = x0(:, scenario_idx) * 10^3;
-% % Stato iniziale in metri [x; vx; y; vy; z; vz]
-% target_pos = [Ax(1:t_transfer); Ay(1:t_transfer); Az(1:t_transfer)]; % Obiettivo: un punto sull'orbita di A 
-% 
-% 
-% % 2. Definizione delle variabili decisionali
-% % Cerchiamo le 3 componenti dell'impulso iniziale: u = [dv1x, dv1y, dv1z]
-% u0 = [0; 0; 0; T/2]; % Punto di partenza per l'ottimizzatore (m/s), A CAZZO 
-% % Fare algoritmo per cercare la guess-iniziale perfetta
-% 
-% % 3. Opzioni dell'algoritmo fmincon
-% options = optimoptions('fmincon', 'Display', 'iter-detailed', ...
-%     'Algorithm', 'interior-point', 'OptimalityTolerance', 1e-9);
-% 
-% % Limiti Inferiori (Lower Bounds)
-% % dv_x >= -10, dv_y >= -10, dv_z >= -10, t_inj >= T/3, t_tof >= 0 (o un valore minimo > 0)
-% lb = [-10, -10, -10, T/3];
-% 
-% % Limiti Superiori (Upper Bounds)
-% % dv_x <= 10, dv_y <= 10, dv_z <= 10, t_inj <= Inf, t_tof <= T
-% ub = [10, 10, 10, T];
-% 
-% % 4. Chiamata a fmincon
-% % La funzione obiettivo minimizza la somma dei moduli dei due impulsi (partenza + arrivo)
-% [u_opt, J_min] = fmincon(@(u) objective_dv(u, xD_start, coeff(1,:), S, proximityP), u0, [], [], [], [], lb, ub, ...
-%                          @(u) constraints_pos(u, xD_start, coeff(1,:), S, proximityP), options);
-% 
-% % 5. Visualizzazione dei risultati
-% fprintf('\n--- RISULTATI OTTIMIZZAZIONE TASK 5 ---\n');
-% fprintf('DeltaV1 Ottimale (m/s): [%.4f, %.4f, %.4f]\n', u_opt(1:3));
-% fprintf('Costo Totale (DeltaV1 + DeltaV2): %.4f m/s\n', J_min);
-% 
-% dv1_ottimo = u_opt(1:3);
-% tempo_di_volo_ottimo = u_opt(4);
-% 
-% fprintf('Costo totale minimo: %.4f m/s\n', J_min);
-% fprintf('Tempo di volo ottimale: %.2f sec (che equivale a %.2f T)\n', tempo_di_volo_ottimo, tempo_di_volo_ottimo/T);
-
 %% Task 5
 % 1. Impostazioni del problema
 scenario_idx = 4;
@@ -399,61 +350,7 @@ function xdot = proximityP_f (t,x, proximityP)
     xdot = [xdot_1, xdot_2, xdot_3, xdot_4, xdot_5, xdot_6]';
 end
 
-% % FUNZIONE OBIETTIVO: Minimizza il DeltaV totale (J = |dv1| + |dv2|)
-% function J = objective_dv(x, x0_start, coeff_A, S, proximityP)
-%     % x(1:3) è il vettore DeltaV1 [dvx, dvy, dvz]
-%     % x(4) è il tempo di trasferimento t
-%     n=proximityP.n;
-%     u = x(1:3); % Estraggo il deltaV
-%     t = x(4);   % Estraggo il tempo scelto da fmincon per questa iterazione
-% 
-%     dv1_mag = norm(u);
-% 
-%     % Calcoliamo dove arriveremmo applicando questo impulso
-%     x0_plus = x0_start;
-%     x0_plus([2, 4, 6]) = x0_plus([2, 4, 6]) + u(:); 
-%     coeff = S \ x0_plus;                            
-% 
-%     % Calcolo la velocità finale al tempo t 
-%     vx_f = real(1i*n*coeff(1)*exp(1i*n*t) - 1i*n*coeff(2)*exp(-1i*n*t));
-%     vy_f = real(-3*coeff(4) - 2*n*coeff(1)*exp(1i*n*t) - 2*n*coeff(2)*exp(-1i*n*t));
-%     vz_f = real(1i*n*coeff(5)*exp(1i*n*t) - 1i*n*coeff(6)*exp(-1i*n*t));
-% 
-%     vx_Af = real(1i*n*coeff_A(1)*exp(1i*n*t) - 1i*n*coeff_A(2)*exp(-1i*n*t));
-%     vy_Af = real(-3*coeff_A(4) - 2*n*coeff_A(1)*exp(1i*n*t) - 2*n*coeff_A(2)*exp(-1i*n*t));
-%     vz_Af = real(1i*n*coeff_A(5)*exp(1i*n*t) - 1i*n*coeff_A(6)*exp(-1i*n*t));
-% 
-%     % Vettore differenza di velocità (già corretto!)
-%     dv2_mag = norm([vx_f - vx_Af; vy_f - vy_Af; vz_f - vz_Af]);
-% 
-%     J = dv1_mag + dv2_mag;
-% end
-% 
-% % VINCOLI: Garantisce che al tempo t_transfer la posizione sia quella target
-% function [c, ceq] = constraints_pos(u, x0_start, coeff_A, S, proximityP)
-%     u_in = u(1:3);
-%     t = u(4);
-%     n=proximityP.n;
-%     % Propagazione Chaser
-%     x0_plus = x0_start;
-%     x0_plus([2, 4, 6]) = x0_plus([2, 4, 6]) + u_in(:);
-%     coeff = S \ x0_plus;
-% 
-%     xf = real(coeff(1)*exp(1i*n*t) + coeff(2)*exp(-1i*n*t) + 2*(coeff(4)/n));
-%     yf = real(coeff(3) - 3*coeff(4)*t + 2*1i*(coeff(1)*exp(1i*n*t) - coeff(2)*exp(-1i*n*t)));
-%     zf = real(coeff(5)*exp(1i*n*t) + coeff(6)*exp(-1i*n*t));
-% 
-%     % Calcolo posizione Target A al tempo t
-%     x_Af = real(coeff_A(1)*exp(1i*n*t) + coeff_A(2)*exp(-1i*n*t) + 2*(coeff_A(4)/n));
-%     y_Af = real(coeff_A(3) - 3*coeff_A(4)*t + 2*1i*(coeff_A(1)*exp(1i*n*t) - coeff_A(2)*exp(-1i*n*t)));
-%     z_Af = real(coeff_A(5)*exp(1i*n*t) + coeff_A(6)*exp(-1i*n*t));
-% 
-%     % Vincolo: Posizione Chaser == Posizione Target
-%     ceq = [xf - x_Af; yf - y_Af; zf - z_Af];
-%     c = [];
-% end
-
-function J = objective_dv(u, xD_start, coeff_A, S, n)
+function J = objective_dv(u, xD_start, coeff_A, S, n) %minimizza il DV totale considerando il boost iniziale e il boost finale per entrare in traiettoria
     dv1    = u(1:3);
     t_wait = u(4);
     t_tof  = u(5);
@@ -480,7 +377,8 @@ function J = objective_dv(u, xD_start, coeff_A, S, n)
     J = norm(dv1) + dv2_mag;
 end
 
-function [c, ceq] = constraints_pos(u, xD_start, coeff_A, S, n)
+function [c, ceq] = constraints_pos(u, xD_start, coeff_A, S, n) 
+% VINCOLO: La posizione del chaser e quella del punto bersaglio devono coincidere all'arrivo
     dv1    = u(1:3);
     t_wait = u(4);
     t_tof  = u(5);
@@ -498,15 +396,12 @@ function [c, ceq] = constraints_pos(u, xD_start, coeff_A, S, n)
     
     % Valuto la posizione dell'orbita A nel punto di inserimento
     stato_A = getState(coeff_A, t_wait + t_tof + tau, n);
-    
-    % VINCOLO: La posizione del chaser e quella del punto bersaglio devono coincidere
+
     ceq = stato_arrivo([1,3,5]) - stato_A([1,3,5]);
     c = [];
 end
 
-function state = getState(coeff, t, n)
-    % Questa utility valuta analiticamente stato e velocità
-    % Funziona anche se 't' è un vettore (per il plot!)
+function state = getState(coeff, t, n) %funzione che calcola velocità e posizione a partire da t (vettore o scalare)
     x = real(coeff(1)*exp(1i*n*t) + coeff(2)*exp(-1i*n*t) + 2*(coeff(4)/n));
     y = real(coeff(3) - 3*coeff(4)*t + 2*1i*(coeff(1)*exp(1i*n*t) - coeff(2)*exp(-1i*n*t)));
     z = real(coeff(5)*exp(1i*n*t) + coeff(6)*exp(-1i*n*t));
