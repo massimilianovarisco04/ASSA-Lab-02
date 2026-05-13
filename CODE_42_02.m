@@ -402,57 +402,6 @@ axis equal;
 view(35, 25); % Angolo per visualizzare bene la differenza lungo l'asse Y
 hold off;
 
-%%
-% % 6. Calcolo traiettorie pulite per il plot
-% 
-% % 1. Fase di attesa sull'orbita D (da t=0 a t_wait)
-% coeff_D = S \ xD_start;
-% t_wait_vec = linspace(0, t_wait_opt, 500);
-% stati_wait = getState(coeff_D, t_wait_vec, n);
-% 
-% % 2. Fase di trasferimento (da t_wait a t_wait + t_tof)
-% stato_dopo_dv1 = stati_wait(:, end);
-% stato_dopo_dv1([2,4,6]) = stato_dopo_dv1([2,4,6]) + dv1_opt(:); % Applico DV1
-% coeff_T = S \ stato_dopo_dv1;
-% 
-% t_tof_vec = linspace(0, t_tof_opt, 500);
-% stati_trans = getState(coeff_T, t_tof_vec, n);
-% 
-% % 3. Orbita A di background (Disegno esattamente 1 periodo per chiarezza)
-% t_A_vec = linspace(0, T, 1000);
-% stati_A = getState(coeff_A, t_A_vec, n);
-% 
-% % Punto effettivo di aggancio previsto sull'orbita A
-% t_arrivo_assoluto = t_wait_opt + t_tof_opt + tau_opt;
-% stato_A_target = getState(coeff_A, t_arrivo_assoluto, n);
-
-% % 7. PLOT (Solo Vista 3D)
-% col_A = [0.00, 0.45, 0.74];   % blu (Orbita A)
-% col_D = [0.85, 0.33, 0.10];   % arancio-rosso (Orbita D)
-% col_T = [0.47, 0.67, 0.19];   % verde (Trasferimento)
-% 
-% figure('Name','D->A: Vista 3D','NumberTitle','off');
-% 
-% % Usiamo direttamente Ax, Ay, Az dal tuo workspace per ripristinare l'Orbita A
-% plot3(Ax, Ay, Az, '--', 'Color', col_A, 'LineWidth', 1.5, 'DisplayName', 'Orbita A (Target)'); hold on;
-% 
-% % Plotto l'arco di attesa su D
-% plot3(stati_wait(1,:), stati_wait(3,:), stati_wait(5,:), '--', 'Color', col_D, 'LineWidth', 2, 'DisplayName', 'Attesa su Orbita D');
-% 
-% % Plotto la traiettoria di trasferimento
-% plot3(stati_trans(1,:), stati_trans(3,:), stati_trans(5,:), '-', 'Color', col_T, 'LineWidth', 2.5, 'DisplayName', 'Arco trasferimento');
-% 
-% % Punti notevoli
-% plot3(xD_start(1), xD_start(3), xD_start(5), 'd', 'Color', col_D, 'MarkerSize',8, 'MarkerFaceColor', col_D, 'DisplayName', 't=0');
-% plot3(stati_wait(1,end), stati_wait(3,end), stati_wait(5,end), 'o', 'Color', col_D, 'MarkerSize',10, 'MarkerFaceColor', col_D, 'DisplayName', 'Partenza (dv1)');
-% plot3(stati_trans(1,end), stati_trans(3,end), stati_trans(5,end), 's', 'Color', col_T, 'MarkerSize',10, 'MarkerFaceColor', col_T, 'DisplayName', 'Aggancio (dv2)');
-% plot3(stato_A_target(1), stato_A_target(3), stato_A_target(5), 'k*', 'MarkerSize', 14, 'LineWidth', 1.5, 'DisplayName', 'Punto di Inserimento Ottimo su A');
-% plot3(0, 0, 0, 'k+', 'MarkerSize',10, 'LineWidth',2, 'DisplayName', 'Chief (origine)');
-% 
-% xlabel('x [m]'); ylabel('y [m]'); zlabel('z [m]');
-% title(sprintf('Inserimento Ottimale D \\rightarrow A (T_{attesa} = %.0fs, T_{volo} = %.0fs)', t_wait_opt, t_tof_opt));
-% legend('Location','best'); grid on; axis equal; view(35,25);
-
 %% ----------------------- Definizione Funzioni ---------------------------
 % Struttura contenente dati del problema
 function proximityP = proximity_parameters()
