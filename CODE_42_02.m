@@ -84,11 +84,11 @@ eigenpairs = eig(A);
 %% Task 3 - Numerical Simulation and Model Comparison
 B=zeros(size(A,1), 1);
 C=[1 0 0 0 0 0;
-    0 0 0 0 0 0;
+    0 1 0 0 0 0;
     0 0 1 0 0 0;
-    0 0 0 0 0 0;
+    0 0 0 1 0 0;
     0 0 0 0 1 0;
-    0 0 0 0 0 0];
+    0 0 0 0 0 1];
 %C è costruita in questo modo perchè non ci interessano le velocità ma solo
 %le posizioni in questa simulazione
 D=zeros(size(C,1), 1);
@@ -293,55 +293,165 @@ fprintf('Tempo di attesa su D   : %.2f sec (%.2f T) [Requisito: >= 0.33 T]\n', t
 fprintf('Tempo di trasferimento : %.2f sec (%.2f T) [Requisito: <= 1.00 T]\n', t_tof_opt, t_tof_opt/T);
 fprintf('Costo totale minimo    : %.4f m/s\n', J_min);
 
-% 6. Calcolo traiettorie pulite per il plot
+%applichiamo i risultati al sistema non lineare
+%- diciamo a ODE di integrare normale fino all'istante del primo impulso
+%- usiamo le condizioni iniziali in quel punto+nostro DV per calcolare la
+%traiettoria fino a t_of_flight
+%- calcoliamo l'errore con il confronto con il punto di arrivo lineare vs
+%non lineare.
 
-% 1. Fase di attesa sull'orbita D (da t=0 a t_wait)
-coeff_D = S \ xD_start;
-t_wait_vec = linspace(0, t_wait_opt, 500);
-stati_wait = getState(coeff_D, t_wait_vec, n);
+ODE_obj = ode;  
+    ODE_obj.ODEFcn = @(t,x) proximityP_f(t,x, proximityP);
+    ODE_obj.InitialValue = x0(:,4).*10^3;
+    ODE_obj.Solver = 'ode45';
+    ODEResults_obj = solve(ODE_obj, t_0, t_wait_opt);
+    tt = ODEResults_obj.Time'; 
+    D_orbit = (ODEResults_obj.Solution');
 
-% 2. Fase di trasferimento (da t_wait a t_wait + t_tof)
-stato_dopo_dv1 = stati_wait(:, end);
-stato_dopo_dv1([2,4,6]) = stato_dopo_dv1([2,4,6]) + dv1_opt(:); % Applico DV1
-coeff_T = S \ stato_dopo_dv1;
+    Dvx=x_opt(1);
+    Dvy=x_opt(2);
+    Dvz=x_opt(3);
 
-t_tof_vec = linspace(0, t_tof_opt, 500);
-stati_trans = getState(coeff_T, t_tof_vec, n);
+    ODE_obj = ode;  
+    ODE_obj.ODEFcn = @(t,x) proximityP_f(t,x, proximityP);
+    ODE_obj.InitialValue = (D_orbit(end,:)+[0;Dvx;0;Dvy;0;Dvz]')';
+    ODE_obj.Solver = 'ode45';
+    ODEResults_obj = solve(ODE_obj, 0, t_tof_opt);
+    t_trasferimento = ODEResults_obj.Time'; 
+    transfer_orbit = (ODEResults_obj.Solution');
 
-% 3. Orbita A di background (Disegno esattamente 1 periodo per chiarezza)
+    [D_orbit_linear]=initial(sys, x0(:,4).*10^3, linspace(0, t_wait_opt, 1000));
+
+    % 1. Fase di attesa sull'orbita D (da t=0 a t_wait)
+    coeff_D = S \ xD_start;
+    t_wait_vec = linspace(0, t_wait_opt, 500);
+    stati_wait = getState(coeff_D, t_wait_vec, n);
+
+    %2. Fase di trasferimento (da t_wait a t_wait + t_tof)
+    stato_dopo_dv1 = stati_wait(:, end);
+    stato_dopo_dv1([2,4,6]) = stato_dopo_dv1([2,4,6]) + [Dvx;Dvy;Dvz]; % Applico DV1
+    coeff_T = S \ stato_dopo_dv1;
+    t_tof_vec = linspace(0, t_tof_opt, 500);
+    stati_trans = getState(coeff_T, t_tof_vec, n);
+
+    %[transfer_orbit_linear]=initial(sys, (D_orbit_linear(end,:)+[0;Dvx;0;Dvy;0;Dvz]')', linspace(0, t_tof_opt, 1000));
+
+    delta_pos=transfer_orbit(end,[1,3,5])-stati_trans([1,3,5],end)';
+    delta_vel=transfer_orbit(end,[2,4,6])-stati_trans([2,4,6],end)';
+    disp(delta_pos);
+    disp(delta_vel);
+
+% 6. Preparazione Dati per il Plot
+% Estraiamo le posizioni (x, y, z) dai risultati calcolati al punto 5.
+% Ricordiamo che le posizioni sono le colonne 1, 3, 5.
+
+% -- Modello NON Lineare --
+pos_D_NL = D_orbit(:, [1, 3, 5]);
+pos_T_NL = transfer_orbit(:, [1, 3, 5]);
+
+% -- Modello Lineare --
+pos_D_L = D_orbit_linear(:, [1, 3, 5]);
+pos_T_L = stati_trans([1, 3, 5],:);
+
+% -- Orbita Target (A) di riferimento --
+% Ricalcoliamo 1 periodo dell'orbita bersaglio per contesto visivo
 t_A_vec = linspace(0, T, 1000);
 stati_A = getState(coeff_A, t_A_vec, n);
+pos_A_L = stati_A([1, 3, 5], :)'; % Trasposta per avere una matrice N x 3
 
-% Punto effettivo di aggancio previsto sull'orbita A
-t_arrivo_assoluto = t_wait_opt + t_tof_opt + tau_opt;
-stato_A_target = getState(coeff_A, t_arrivo_assoluto, n);
+% 7. PLOT 3D: Confronto Lineare vs Non Lineare
+figure('Name','Confronto Modelli 3D: Lineare vs Non Lineare','NumberTitle','off');
+hold on; grid on;
 
-% 7. PLOT (Solo Vista 3D)
-col_A = [0.00, 0.45, 0.74];   % blu (Orbita A)
-col_D = [0.85, 0.33, 0.10];   % arancio-rosso (Orbita D)
-col_T = [0.47, 0.67, 0.19];   % verde (Trasferimento)
+% Definizione colori per chiarezza
+col_A  = [0.50, 0.50, 0.50]; % Grigio per l'orbita bersaglio
+col_NL = [0.85, 0.33, 0.10]; % Rosso-Arancio per il Non Lineare
+col_L  = [0.00, 0.45, 0.74]; % Blu per il Lineare
 
-figure('Name','D->A: Vista 3D','NumberTitle','off');
+% 1. Plot Orbita Target A (Sfondo)
+plot3(pos_A_L(:,1), pos_A_L(:,2), pos_A_L(:,3), ':', 'Color', col_A, 'LineWidth', 1.5, 'DisplayName', 'Orbita A Target');
 
-% Usiamo direttamente Ax, Ay, Az dal tuo workspace per ripristinare l'Orbita A
-plot3(Ax, Ay, Az, '--', 'Color', col_A, 'LineWidth', 1.5, 'DisplayName', 'Orbita A (Target)'); hold on;
+% 2. Plot Fase di Attesa sull'Orbita D
+plot3(pos_D_NL(:,1), pos_D_NL(:,2), pos_D_NL(:,3), '-', 'Color', col_NL, 'LineWidth', 1.5, 'DisplayName', 'Attesa D (Non Lineare)');
+plot3(pos_D_L(:,1), pos_D_L(:,2), pos_D_L(:,3), '--', 'Color', col_L, 'LineWidth', 1.5, 'DisplayName', 'Attesa D (Lineare)');
 
-% Plotto l'arco di attesa su D
-plot3(stati_wait(1,:), stati_wait(3,:), stati_wait(5,:), '--', 'Color', col_D, 'LineWidth', 2, 'DisplayName', 'Attesa su Orbita D');
+% 3. Plot Fase di Trasferimento
+plot3(pos_T_NL(:,1), pos_T_NL(:,2), pos_T_NL(:,3), '-', 'Color', col_NL, 'LineWidth', 2.5, 'DisplayName', 'Transfer (Non Lineare)');
+plot3(pos_T_L(1,:), pos_T_L(2,:), pos_T_L(3,:), '--', 'Color', col_L, 'LineWidth', 2.5, 'DisplayName', 'Transfer (Lineare)');
 
-% Plotto la traiettoria di trasferimento
-plot3(stati_trans(1,:), stati_trans(3,:), stati_trans(5,:), '-', 'Color', col_T, 'LineWidth', 2.5, 'DisplayName', 'Arco trasferimento');
+% 4. MARKERS: Punti Notevoli
+% Punto di partenza comune (t=0)
+plot3(pos_D_L(1,1), pos_D_L(1,2), pos_D_L(1,3), 'ko', 'MarkerFaceColor', 'k', 'MarkerSize', 6, 'DisplayName', 'Start (t=0)');
 
-% Punti notevoli
-plot3(xD_start(1), xD_start(3), xD_start(5), 'd', 'Color', col_D, 'MarkerSize',8, 'MarkerFaceColor', col_D, 'DisplayName', 't=0');
-plot3(stati_wait(1,end), stati_wait(3,end), stati_wait(5,end), 'o', 'Color', col_D, 'MarkerSize',10, 'MarkerFaceColor', col_D, 'DisplayName', 'Partenza (dv1)');
-plot3(stati_trans(1,end), stati_trans(3,end), stati_trans(5,end), 's', 'Color', col_T, 'MarkerSize',10, 'MarkerFaceColor', col_T, 'DisplayName', 'Aggancio (dv2)');
-plot3(stato_A_target(1), stato_A_target(3), stato_A_target(5), 'k*', 'MarkerSize', 14, 'LineWidth', 1.5, 'DisplayName', 'Punto di Inserimento Ottimo su A');
-plot3(0, 0, 0, 'k+', 'MarkerSize',10, 'LineWidth',2, 'DisplayName', 'Chief (origine)');
+% Punto di applicazione del Delta-V 1
+plot3(pos_D_NL(end,1), pos_D_NL(end,2), pos_D_NL(end,3), 'o', 'Color', col_NL, 'MarkerFaceColor', col_NL, 'MarkerSize', 7, 'DisplayName', 'Impulso NL');
+plot3(pos_D_L(end,1), pos_D_L(end,2), pos_D_L(end,3), 'o', 'Color', col_L, 'MarkerFaceColor', col_L, 'MarkerSize', 7, 'DisplayName', 'Impulso Lineare');
 
+% Punto di Arrivo (Dove si vede l'errore calcolato!)
+plot3(pos_T_NL(end,1), pos_T_NL(end,2), pos_T_NL(end,3), 's', 'Color', col_NL, 'MarkerFaceColor', col_NL, 'MarkerSize', 10, 'DisplayName', 'Arrivo NL');
+plot3(pos_T_L(1,end), pos_T_L(2,end), pos_T_L(3,end), 's', 'Color', col_L, 'MarkerFaceColor', col_L, 'MarkerSize', 10, 'DisplayName', 'Arrivo Lineare');
+
+% Origine (Target)
+plot3(0, 0, 0, 'k+', 'MarkerSize', 10, 'LineWidth', 2, 'DisplayName', 'Origine (Chief)');
+
+% 5. Formattazione del grafico
 xlabel('x [m]'); ylabel('y [m]'); zlabel('z [m]');
-title(sprintf('Inserimento Ottimale D \\rightarrow A (T_{attesa} = %.0fs, T_{volo} = %.0fs)', t_wait_opt, t_tof_opt));
-legend('Location','best'); grid on; axis equal; view(35,25);
+title('Traiettorie di Avvicinamento: Lineare vs Non Lineare');
+legend('Location', 'best');
+axis equal; 
+view(35, 25); % Angolo per visualizzare bene la differenza lungo l'asse Y
+hold off;
+
+%%
+% % 6. Calcolo traiettorie pulite per il plot
+% 
+% % 1. Fase di attesa sull'orbita D (da t=0 a t_wait)
+% coeff_D = S \ xD_start;
+% t_wait_vec = linspace(0, t_wait_opt, 500);
+% stati_wait = getState(coeff_D, t_wait_vec, n);
+% 
+% % 2. Fase di trasferimento (da t_wait a t_wait + t_tof)
+% stato_dopo_dv1 = stati_wait(:, end);
+% stato_dopo_dv1([2,4,6]) = stato_dopo_dv1([2,4,6]) + dv1_opt(:); % Applico DV1
+% coeff_T = S \ stato_dopo_dv1;
+% 
+% t_tof_vec = linspace(0, t_tof_opt, 500);
+% stati_trans = getState(coeff_T, t_tof_vec, n);
+% 
+% % 3. Orbita A di background (Disegno esattamente 1 periodo per chiarezza)
+% t_A_vec = linspace(0, T, 1000);
+% stati_A = getState(coeff_A, t_A_vec, n);
+% 
+% % Punto effettivo di aggancio previsto sull'orbita A
+% t_arrivo_assoluto = t_wait_opt + t_tof_opt + tau_opt;
+% stato_A_target = getState(coeff_A, t_arrivo_assoluto, n);
+
+% % 7. PLOT (Solo Vista 3D)
+% col_A = [0.00, 0.45, 0.74];   % blu (Orbita A)
+% col_D = [0.85, 0.33, 0.10];   % arancio-rosso (Orbita D)
+% col_T = [0.47, 0.67, 0.19];   % verde (Trasferimento)
+% 
+% figure('Name','D->A: Vista 3D','NumberTitle','off');
+% 
+% % Usiamo direttamente Ax, Ay, Az dal tuo workspace per ripristinare l'Orbita A
+% plot3(Ax, Ay, Az, '--', 'Color', col_A, 'LineWidth', 1.5, 'DisplayName', 'Orbita A (Target)'); hold on;
+% 
+% % Plotto l'arco di attesa su D
+% plot3(stati_wait(1,:), stati_wait(3,:), stati_wait(5,:), '--', 'Color', col_D, 'LineWidth', 2, 'DisplayName', 'Attesa su Orbita D');
+% 
+% % Plotto la traiettoria di trasferimento
+% plot3(stati_trans(1,:), stati_trans(3,:), stati_trans(5,:), '-', 'Color', col_T, 'LineWidth', 2.5, 'DisplayName', 'Arco trasferimento');
+% 
+% % Punti notevoli
+% plot3(xD_start(1), xD_start(3), xD_start(5), 'd', 'Color', col_D, 'MarkerSize',8, 'MarkerFaceColor', col_D, 'DisplayName', 't=0');
+% plot3(stati_wait(1,end), stati_wait(3,end), stati_wait(5,end), 'o', 'Color', col_D, 'MarkerSize',10, 'MarkerFaceColor', col_D, 'DisplayName', 'Partenza (dv1)');
+% plot3(stati_trans(1,end), stati_trans(3,end), stati_trans(5,end), 's', 'Color', col_T, 'MarkerSize',10, 'MarkerFaceColor', col_T, 'DisplayName', 'Aggancio (dv2)');
+% plot3(stato_A_target(1), stato_A_target(3), stato_A_target(5), 'k*', 'MarkerSize', 14, 'LineWidth', 1.5, 'DisplayName', 'Punto di Inserimento Ottimo su A');
+% plot3(0, 0, 0, 'k+', 'MarkerSize',10, 'LineWidth',2, 'DisplayName', 'Chief (origine)');
+% 
+% xlabel('x [m]'); ylabel('y [m]'); zlabel('z [m]');
+% title(sprintf('Inserimento Ottimale D \\rightarrow A (T_{attesa} = %.0fs, T_{volo} = %.0fs)', t_wait_opt, t_tof_opt));
+% legend('Location','best'); grid on; axis equal; view(35,25);
 
 %% ----------------------- Definizione Funzioni ---------------------------
 % Struttura contenente dati del problema
