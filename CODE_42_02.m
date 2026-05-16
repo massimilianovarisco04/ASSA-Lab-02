@@ -240,46 +240,20 @@ ub = [ 10;  10;  10; Inf;   T;  T];
 % 4. Chiamata fmincon
 xA_start = x0(:, 1) * 10^3; 
 coeff_A = S \ xA_start;     % Coefficienti dell'orbita bersaglio A
-J_best=inf;
 
-for i=1:10
-    if i == 1
-        [x_opt, J_min] = fmincon(@(u) objective_dv(u, xD_start, coeff_A, S, n), ...
-                         x0_guess, [], [], [], [], lb, ub, ...
-                         @(u) constraints_pos(u, xD_start, coeff_A, S, n), options);
-    %J_min è il costo totale della missione
-    end
-    if  J_min >= norm (x0_guess(1:3)) && i > 1
-        norma  = J_min;
-        dir_casuale = randn(3, 1);
-    
-    % 2. Normalizzo il vettore dividendolo per la sua stessa norma (ora è lungo esattamente 1)
-    dir_normalizzata = dir_casuale / norm(dir_casuale);
-    
-    % 3. Ti riduce rispetto a J_min questo! quindi ottengo delle guess che
-    % in modulo sono sempre inferiori a J_MIN
-    nuovo_modulo = rand() * norma;
-    
-    % Moltiplico la direzione di raggio 1 per il nuovo modulo
-    nuovo_vettore_3d = dir_normalizzata * nuovo_modulo;
-    
-    % 4. Ricostruisco il guess iniziale concatenando le parti
-    x0_guess = [nuovo_vettore_3d; x_opt(4); x_opt(5); x_opt(6)];
+% Creazione del problema per l'ottimizzatore globale
+problem = createOptimProblem('fmincon', ...
+    'objective', @(u) objective_dv(u, xD_start, coeff_A, S, n), ...
+    'x0', x0_guess, ...
+    'lb', lb, ...
+    'ub', ub, ...
+    'nonlcon', @(u) constraints_pos(u, xD_start, coeff_A, S, n), ...
+    'options', options);
 
-    [x_opt, J_min] = fmincon(@(u) objective_dv(u, xD_start, coeff_A, S, n), ...
-                         x0_guess, [], [], [], [], lb, ub, ...
-                         @(u) constraints_pos(u, xD_start, coeff_A, S, n), options);
-    end
-disp(J_min);
-
-    if J_min < J_best %sta roba non succede mai dopo la prima iterazione, succede solo una volta. Questo conferma che il migliore risultato possibile, per 10 test di guess
-        %iniziali minori del deltaV totale della prima guess, è quello dato
-        %dalla prima guess. tutte queste guess sono quindi guess iniziali
-        %ottimali!
-        J_best = J_min;
-        x_best = x_opt;
-    end
-end
+% Configurazione e Lancio di GlobalSearch
+% (NumTrialPoints = 200 è un buon compromesso per non rallentare troppo il pc)
+gs = GlobalSearch('Display', 'iter', 'NumTrialPoints', 200);
+[x_opt, J_min] = run(gs, problem);
 
 % 5. Estrazione Risultati
 dv1_opt    = x_opt(1:3);
@@ -333,8 +307,6 @@ ODE_obj = ode;
     coeff_T = S \ stato_dopo_dv1;
     t_tof_vec = linspace(0, t_tof_opt, 500);
     stati_trans = getState(coeff_T, t_tof_vec, n);
-
-    %[transfer_orbit_linear]=initial(sys, (D_orbit_linear(end,:)+[0;Dvx;0;Dvy;0;Dvz]')', linspace(0, t_tof_opt, 1000));
 
     delta_pos=transfer_orbit(end,[1,3,5])-stati_trans([1,3,5],end)';
     delta_vel=transfer_orbit(end,[2,4,6])-stati_trans([2,4,6],end)';
