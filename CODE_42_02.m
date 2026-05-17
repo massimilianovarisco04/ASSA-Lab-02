@@ -243,7 +243,8 @@ coeff_A = S \ xA_start;     % Coefficienti dell'orbita bersaglio A
 
 % Creazione del problema per l'ottimizzatore globale
 problem = createOptimProblem('fmincon', ...
-    'objective', @(u) objective_dv(u, xD_start, coeff_A, S, n), ...
+    'objective', ...
+    @(u) objective_dv(u, xD_start, coeff_A, S, n), ...
     'x0', x0_guess, ...
     'lb', lb, ...
     'ub', ub, ...
@@ -275,43 +276,43 @@ fprintf('Costo totale minimo    : %.4f m/s\n', J_min);
 %non lineare.
 
 ODE_obj = ode;  
-    ODE_obj.ODEFcn = @(t,x) proximityP_f(t,x, proximityP);
-    ODE_obj.InitialValue = x0(:,4).*10^3;
-    ODE_obj.Solver = 'ode45';
-    ODEResults_obj = solve(ODE_obj, t_0, t_wait_opt);
-    tt = ODEResults_obj.Time'; 
-    D_orbit = (ODEResults_obj.Solution');
+ODE_obj.ODEFcn = @(t,x) proximityP_f(t,x, proximityP);
+ODE_obj.InitialValue = x0(:,4).*10^3;
+ODE_obj.Solver = 'ode45';
+ODEResults_obj = solve(ODE_obj, t_0, t_wait_opt);
+tt = ODEResults_obj.Time'; 
+D_orbit = (ODEResults_obj.Solution');
 
-    Dvx=x_opt(1);
-    Dvy=x_opt(2);
-    Dvz=x_opt(3);
+Dvx=x_opt(1);
+Dvy=x_opt(2);
+Dvz=x_opt(3);
 
-    ODE_obj = ode;  
-    ODE_obj.ODEFcn = @(t,x) proximityP_f(t,x, proximityP);
-    ODE_obj.InitialValue = (D_orbit(end,:)+[0;Dvx;0;Dvy;0;Dvz]')';
-    ODE_obj.Solver = 'ode45';
-    ODEResults_obj = solve(ODE_obj, 0, t_tof_opt);
-    t_trasferimento = ODEResults_obj.Time'; 
-    transfer_orbit = (ODEResults_obj.Solution');
+ODE_obj = ode;  
+ODE_obj.ODEFcn = @(t,x) proximityP_f(t,x, proximityP);
+ODE_obj.InitialValue = (D_orbit(end,:)+[0;Dvx;0;Dvy;0;Dvz]')';
+ODE_obj.Solver = 'ode45';
+ODEResults_obj = solve(ODE_obj, 0, t_tof_opt);
+t_trasferimento = ODEResults_obj.Time'; 
+transfer_orbit = (ODEResults_obj.Solution');
 
-    [D_orbit_linear]=initial(sys, x0(:,4).*10^3, linspace(0, t_wait_opt, 1000));
+[D_orbit_linear]=initial(sys, x0(:,4).*10^3, linspace(0, t_wait_opt, 1000));
 
-    % 1. Fase di attesa sull'orbita D (da t=0 a t_wait)
-    coeff_D = S \ xD_start;
-    t_wait_vec = linspace(0, t_wait_opt, 500);
-    stati_wait = getState(coeff_D, t_wait_vec, n);
+% 1. Fase di attesa sull'orbita D (da t=0 a t_wait)
+coeff_D = S \ xD_start;
+t_wait_vec = linspace(0, t_wait_opt, 500);
+stati_wait = getState(coeff_D, t_wait_vec, n);
 
-    %2. Fase di trasferimento (da t_wait a t_wait + t_tof)
-    stato_dopo_dv1 = stati_wait(:, end);
-    stato_dopo_dv1([2,4,6]) = stato_dopo_dv1([2,4,6]) + [Dvx;Dvy;Dvz]; % Applico DV1
-    coeff_T = S \ stato_dopo_dv1;
-    t_tof_vec = linspace(0, t_tof_opt, 500);
-    stati_trans = getState(coeff_T, t_tof_vec, n);
+%2. Fase di trasferimento (da t_wait a t_wait + t_tof)
+stato_dopo_dv1 = stati_wait(:, end);
+stato_dopo_dv1([2,4,6]) = stato_dopo_dv1([2,4,6]) + [Dvx;Dvy;Dvz]; % Applico DV1
+coeff_T = S \ stato_dopo_dv1;
+t_tof_vec = linspace(0, t_tof_opt, 500);
+stati_trans = getState(coeff_T, t_tof_vec, n);
 
-    delta_pos=transfer_orbit(end,[1,3,5])-stati_trans([1,3,5],end)';
-    delta_vel=transfer_orbit(end,[2,4,6])-stati_trans([2,4,6],end)';
-    disp(delta_pos);
-    disp(delta_vel);
+delta_pos=transfer_orbit(end,[1,3,5])-stati_trans([1,3,5],end)';
+delta_vel=transfer_orbit(end,[2,4,6])-stati_trans([2,4,6],end)';
+disp(delta_pos);
+disp(delta_vel);
 
 % 6. Preparazione Dati per il Plot
 % Estraiamo le posizioni (x, y, z) dai risultati calcolati al punto 5.
@@ -334,38 +335,29 @@ pos_A_L = stati_A([1, 3, 5], :)'; % Trasposta per avere una matrice N x 3
 % 7. PLOT 3D: Confronto Lineare vs Non Lineare
 figure('Name','Comparison between Linear and Nonlinear Models','NumberTitle','off');
 hold on; grid on;
-
 % Definizione colori per chiarezza
 col_A  = [0.50, 0.50, 0.50]; % Grigio per l'orbita bersaglio
 col_NL = [0.85, 0.33, 0.10]; % Rosso-Arancio per il Non Lineare
 col_L  = [0.00, 0.45, 0.74]; % Blu per il Lineare
-
 % 1. Plot Orbita Target A (Sfondo)
 plot3(pos_A_L(:,1), pos_A_L(:,2), pos_A_L(:,3), ':', 'Color', col_A, 'LineWidth', 1.5, 'DisplayName', 'Orbit A Target');
-
 % 2. Plot Fase di Attesa sull'Orbita D
 plot3(pos_D_NL(:,1), pos_D_NL(:,2), pos_D_NL(:,3), '-', 'Color', col_NL, 'LineWidth', 1.5, 'DisplayName', 'Waiting time D (Non Linear)');
 plot3(pos_D_L(:,1), pos_D_L(:,2), pos_D_L(:,3), '--', 'Color', col_L, 'LineWidth', 1.5, 'DisplayName', 'Waiting time D (Linear)');
-
 % 3. Plot Fase di Trasferimento
 plot3(pos_T_NL(:,1), pos_T_NL(:,2), pos_T_NL(:,3), '-', 'Color', col_NL, 'LineWidth', 2.5, 'DisplayName', 'Transfer (Non Linear)');
 plot3(pos_T_L(1,:), pos_T_L(2,:), pos_T_L(3,:), '--', 'Color', col_L, 'LineWidth', 2.5, 'DisplayName', 'Transfer (Linear)');
-
 % 4. MARKERS: Punti Notevoli
 % Punto di partenza comune (t=0)
 plot3(pos_D_L(1,1), pos_D_L(1,2), pos_D_L(1,3), 'ko', 'MarkerFaceColor', 'k', 'MarkerSize', 6, 'DisplayName', 'Start (t=0)');
-
 % Punto di applicazione del Delta-V 1
 plot3(pos_D_NL(end,1), pos_D_NL(end,2), pos_D_NL(end,3), 'o', 'Color', col_NL, 'MarkerFaceColor', col_NL, 'MarkerSize', 7, 'DisplayName', 'Impulse NL');
 plot3(pos_D_L(end,1), pos_D_L(end,2), pos_D_L(end,3), 'o', 'Color', col_L, 'MarkerFaceColor', col_L, 'MarkerSize', 7, 'DisplayName', 'Impulse Linear');
-
 % Punto di Arrivo (Dove si vede l'errore calcolato!)
 plot3(pos_T_NL(end,1), pos_T_NL(end,2), pos_T_NL(end,3), 's', 'Color', col_NL, 'MarkerFaceColor', col_NL, 'MarkerSize', 10, 'DisplayName', 'Arrival NL');
 plot3(pos_T_L(1,end), pos_T_L(2,end), pos_T_L(3,end), 's', 'Color', col_L, 'MarkerFaceColor', col_L, 'MarkerSize', 10, 'DisplayName', 'Arrival Linear');
-
 % Origine (Target)
 plot3(0, 0, 0, 'k+', 'MarkerSize', 10, 'LineWidth', 2, 'DisplayName', 'Origin (Chief)');
-
 % 5. Formattazione del grafico
 xlabel('x [m]'); ylabel('y [m]'); zlabel('z [m]');
 title('Comparison between Linear and Nonlinear Models');
@@ -373,33 +365,24 @@ legend('Location', 'best');
 axis equal; 
 view(70, 50); % Angolo per visualizzare bene la differenza lungo l'asse Y
 hold off;
-
 % Grafico della sola traiettoria prevista dal modello non lineare
 figure('Name','Nonlinear transfer trajectory','NumberTitle','off');
 hold on; grid on;
-
 % 1. Plot Orbita A (sfondo)
 plot3(pos_A_L(:,1), pos_A_L(:,2), pos_A_L(:,3), ':', 'Color', col_A, 'LineWidth', 1.5, 'DisplayName', 'Orbit A Target');
-
 % 2. Plot Fase di Attesa sull'Orbita D
 plot3(pos_D_NL(:,1), pos_D_NL(:,2), pos_D_NL(:,3), '-', 'Color', col_NL, 'LineWidth', 1.5, 'DisplayName', 'Waiting Time D');
-
 % 3. Plot Fase di Trasferimento
 plot3(pos_T_NL(:,1), pos_T_NL(:,2), pos_T_NL(:,3), '-', 'Color', col_NL, 'LineWidth', 2.5, 'DisplayName', ['Transfer']);
-
 % 4. MARKERS: Punti Notevoli
 % Punto di partenza (t=0)
 plot3(pos_D_NL(1,1), pos_D_NL(1,2), pos_D_NL(1,3), 'ko', 'MarkerFaceColor', 'k', 'MarkerSize', 6, 'DisplayName', 'Start (t=0)');
-
 % Punto di applicazione del Delta-V 1
 plot3(pos_D_NL(end,1), pos_D_NL(end,2), pos_D_NL(end,3), 'o', 'Color', col_NL, 'MarkerFaceColor', col_NL, 'MarkerSize', 7, 'DisplayName', 'Impulse');
-
 % Punto di Arrivo (Dove si vede l'errore calcolato!)
 plot3(pos_T_NL(end,1), pos_T_NL(end,2), pos_T_NL(end,3), 's', 'Color', col_NL, 'MarkerFaceColor', col_NL, 'MarkerSize', 10, 'DisplayName', ['Arrival']);
-
 % Origine (Target)
 plot3(0, 0, 0, 'k+', 'MarkerSize', 10, 'LineWidth', 2, 'DisplayName', 'Origin (Chief)');
-
 % 5. Formattazione del grafico
 xlabel('x [m]'); ylabel('y [m]'); zlabel('z [m]');
 title('Nonlinear transfer trajectory');
@@ -407,6 +390,81 @@ legend('Location', 'best');
 axis equal; 
 view(30, 40); % Angolo per visualizzare bene la differenza lungo l'asse Y
 hold off;
+
+% figure('Name','3D Real-Time Trajectory Animation','NumberTitle','off');
+% hold on; grid on; axis equal; 
+% view(70, 50); % Stesso angolo di visualizzazione del tuo primo plot
+% xlabel('x [m]'); ylabel('y [m]'); zlabel('z [m]');
+% title('3D Animation: Linear vs Nonlinear Proximity Operations');
+% 
+% % 1. Disegno dello sfondo statico (Orbita Target A e Origine)
+% plot3(pos_A_L(:,1), pos_A_L(:,2), pos_A_L(:,3), ':', 'Color', col_A, 'LineWidth', 1.5, 'Handlevisibility', 'off');
+% plot3(0, 0, 0, 'k+', 'MarkerSize', 10, 'LineWidth', 2, 'DisplayName', 'Origin (Chief)');
+% 
+% % 2. Inizializzazione delle linee animate (Scia dei satelliti)
+% an_D_NL = animatedline('Color', col_NL, 'LineWidth', 1.5, 'LineStyle', '-',  'DisplayName', 'Nonlinear Path');
+% an_T_NL = animatedline('Color', col_NL, 'LineWidth', 2.5, 'LineStyle', '-');
+% an_D_L  = animatedline('Color', col_L,  'LineWidth', 1.5, 'LineStyle', '--', 'DisplayName', 'Linear Path');
+% an_T_L  = animatedline('Color', col_L,  'LineWidth', 2.5, 'LineStyle', '--');
+% 
+% % 3. Inizializzazione dei Marker per i satelliti in movimento
+% sat_NL = plot3(NaN, NaN, NaN, 'o', 'Color', col_NL, 'MarkerFaceColor', col_NL, 'MarkerSize', 6, 'DisplayName', 'Sat NL');
+% sat_L  = plot3(NaN, NaN, NaN, 'o', 'Color', col_L,  'MarkerFaceColor', col_L,  'MarkerSize', 6, 'DisplayName', 'Sat Linear');
+% 
+% legend('Location', 'best');
+% 
+% % Configurazione campionamento animazione (Numero di fotogrammi per fase)
+% N_frames = 200; 
+% pause_time = 0.01; % Minore = più veloce, Maggiore = più lento
+% 
+% t_wait_common = linspace(0, t_wait_opt, N_frames);
+% pos_D_NL_interp = interp1(tt(:), pos_D_NL, t_wait_common(:));
+% 
+% % SOLUZIONE: Genera il vettore dei tempi basandoti sul numero reale di righe di pos_D_L (1000 punti)
+% t_D_L_real = linspace(0, t_wait_opt, size(pos_D_L, 1));
+% pos_D_L_interp  = interp1(t_D_L_real(:), pos_D_L, t_wait_common(:));
+% 
+% % Punto di partenza iniziale (t=0)
+% plot3(pos_D_L(1,1), pos_D_L(1,2), pos_D_L(1,3), 'ko', 'MarkerFaceColor', 'k', 'MarkerSize', 6, 'Handlevisibility', 'off');
+% 
+% for i = 1:N_frames
+%     % Aggiorna le scie (Fase Attesa)
+%     addpoints(an_D_NL, pos_D_NL_interp(i,1), pos_D_NL_interp(i,2), pos_D_NL_interp(i,3));
+%     addpoints(an_D_L,  pos_D_L_interp(i,1),  pos_D_L_interp(i,2),  pos_D_L_interp(i,3));
+% 
+%     % Muovi i satelliti
+%     set(sat_NL, 'XData', pos_D_NL_interp(i,1), 'YData', pos_D_NL_interp(i,2), 'ZData', pos_D_NL_interp(i,3));
+%     set(sat_L,  'XData', pos_D_L_interp(i,1),  'YData', pos_D_L_interp(i,2),  'ZData', pos_D_L_interp(i,3));
+% 
+%     drawnow;
+%     pause(pause_time);
+% end
+% % --- FASE 2: ANIMAZIONE TRASFERIMENTO (Transfer) ---
+% t_tof_common = linspace(0, t_tof_opt, N_frames);
+% pos_T_NL_interp = interp1(t_trasferimento(:), pos_T_NL, t_tof_common(:));
+% pos_T_L_interp  = interp1(t_tof_vec(:), pos_T_L', t_tof_common(:)); % Trasposta per match dimensioni
+% 
+% for i = 1:N_frames
+%     % Aggiorna le scie (Fase Trasferimento)
+%     addpoints(an_T_NL, pos_T_NL_interp(i,1), pos_T_NL_interp(i,2), pos_T_NL_interp(i,3));
+%     addpoints(an_T_L,  pos_T_L_interp(i,1),  pos_T_L_interp(i,2),  pos_T_L_interp(i,3));
+% 
+%     % Muovi i satelliti
+%     set(sat_NL, 'XData', pos_T_NL_interp(i,1), 'YData', pos_T_NL_interp(i,2), 'ZData', pos_T_NL_interp(i,3));
+%     set(sat_L,  'XData', pos_T_L_interp(i,1),  'YData', pos_T_L_interp(i,2),  'ZData', pos_T_L_interp(i,3));
+% 
+%     drawnow;
+%     pause(pause_time);
+% end
+% 
+% % Marker finali di Arrivo
+% plot3(pos_T_NL(end,1), pos_T_NL(end,2), pos_T_NL(end,3), 's', 'Color', col_NL, 'MarkerFaceColor', col_NL, 'MarkerSize', 10, 'Handlevisibility', 'off');
+% plot3(pos_T_L(1,end),  pos_T_L(2,end),  pos_T_L(3,end),  's', 'Color', col_L,  'MarkerFaceColor', col_L,  'MarkerSize', 10, 'Handlevisibility', 'off');
+% 
+% hold off;
+
+
+% 5.3 Advanced Trajectory Design.
 
 %% ----------------------- Definizione Funzioni ---------------------------
 % Struttura contenente dati del problema
