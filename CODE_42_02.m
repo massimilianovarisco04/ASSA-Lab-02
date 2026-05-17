@@ -332,7 +332,7 @@ stati_A = getState(coeff_A, t_A_vec, n);
 pos_A_L = stati_A([1, 3, 5], :)'; % Trasposta per avere una matrice N x 3
 
 % 7. PLOT 3D: Confronto Lineare vs Non Lineare
-figure('Name','Confronto Modelli 3D: Lineare vs Non Lineare','NumberTitle','off');
+figure('Name','Comparison between Linear and Nonlinear Models','NumberTitle','off');
 hold on; grid on;
 
 % Definizione colori per chiarezza
@@ -368,10 +368,44 @@ plot3(0, 0, 0, 'k+', 'MarkerSize', 10, 'LineWidth', 2, 'DisplayName', 'Origine (
 
 % 5. Formattazione del grafico
 xlabel('x [m]'); ylabel('y [m]'); zlabel('z [m]');
-title('Traiettorie di Avvicinamento: Lineare vs Non Lineare');
+title('Comparison between Linear and Nonlinear Models');
 legend('Location', 'best');
 axis equal; 
-view(35, 25); % Angolo per visualizzare bene la differenza lungo l'asse Y
+view(70, 50); % Angolo per visualizzare bene la differenza lungo l'asse Y
+hold off;
+
+% Grafico della sola traiettoria prevista dal modello non lineare
+figure('Name','Nonlinear transfer trajectory','NumberTitle','off');
+hold on; grid on;
+
+% 1. Plot Orbita A (sfondo)
+plot3(pos_A_L(:,1), pos_A_L(:,2), pos_A_L(:,3), ':', 'Color', col_A, 'LineWidth', 1.5, 'DisplayName', 'Orbita A Target');
+
+% 2. Plot Fase di Attesa sull'Orbita D
+plot3(pos_D_NL(:,1), pos_D_NL(:,2), pos_D_NL(:,3), '-', 'Color', col_NL, 'LineWidth', 1.5, 'DisplayName', 'Attesa D');
+
+% 3. Plot Fase di Trasferimento
+plot3(pos_T_NL(:,1), pos_T_NL(:,2), pos_T_NL(:,3), '-', 'Color', col_NL, 'LineWidth', 2.5, 'DisplayName', ['Transfer']);
+
+% 4. MARKERS: Punti Notevoli
+% Punto di partenza (t=0)
+plot3(pos_D_NL(1,1), pos_D_NL(1,2), pos_D_NL(1,3), 'ko', 'MarkerFaceColor', 'k', 'MarkerSize', 6, 'DisplayName', 'Start (t=0)');
+
+% Punto di applicazione del Delta-V 1
+plot3(pos_D_NL(end,1), pos_D_NL(end,2), pos_D_NL(end,3), 'o', 'Color', col_NL, 'MarkerFaceColor', col_NL, 'MarkerSize', 7, 'DisplayName', 'Impulso');
+
+% Punto di Arrivo (Dove si vede l'errore calcolato!)
+plot3(pos_T_NL(end,1), pos_T_NL(end,2), pos_T_NL(end,3), 's', 'Color', col_NL, 'MarkerFaceColor', col_NL, 'MarkerSize', 10, 'DisplayName', ['Arrivo']);
+
+% Origine (Target)
+plot3(0, 0, 0, 'k+', 'MarkerSize', 10, 'LineWidth', 2, 'DisplayName', 'Origine (Chief)');
+
+% 5. Formattazione del grafico
+xlabel('x [m]'); ylabel('y [m]'); zlabel('z [m]');
+title('Nonlinear transfer trajectory');
+legend('Location', 'best');
+axis equal; 
+view(30, 40); % Angolo per visualizzare bene la differenza lungo l'asse Y
 hold off;
 
 %% ----------------------- Definizione Funzioni ---------------------------
