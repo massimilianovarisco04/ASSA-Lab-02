@@ -363,8 +363,12 @@ xlabel('x [m]'); ylabel('y [m]'); zlabel('z [m]');
 title('Comparison between Linear and Nonlinear Models');
 legend('Location', 'best');
 axis equal; 
-view(70, 50); % Angolo per visualizzare bene la differenza lungo l'asse Y
+% Io farei vista (70, 50), vista (120,30) e (60,10)
+view(70,50); % Angolo per visualizzare bene la differenza lungo l'asse Y
 hold off;
+ylim([-900, 300]);
+xlim([-500, 300]);
+
 % Grafico della sola traiettoria prevista dal modello non lineare
 figure('Name','Nonlinear transfer trajectory','NumberTitle','off');
 hold on; grid on;
