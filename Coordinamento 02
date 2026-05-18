@@ -10,3 +10,21 @@ FARE ANCHE IL LATEX DI QUESTE TASK.
 - MAX: 5.1
 - MARTA: 5.2 
 
+20/05
+Per fare il sistema di controllo in anello chiuso, visto che dobbiamo controllare 6 varibili (3 posizioni e 3 velocità),
+forse l'unico modo che conosciamo per farlo è il controllore in Space-State. Lo facciamo come chiede il Dozio sul sistema
+linearizzato. 
+Si basa tutto come l'altra volta sul creare una matrice A_c che abbia autovalori negativi, e i coefficienti del controllore spostano i poli. 
+Se il nostro input di controllo devono essere le accelerazioni, noi diamo delle accelerazioni proporzionali all'errore su posizioni e velocità,
+mescolate un po' come fa il controllore in State-Space. E le sommiamo alle accelerazioni che ha già il sistema.
+Per vedere se poi funziona bene possiamo inventarci un disturbo, che potrebbe anche essere quello di cambiare le condizioni iniziali,
+oppure un disturbo a metà viaggio (non so nello spazio però quanto senso possa avere). Dato che poi dobbiamo farlo funzionare sul non lineare,
+avrebbe senso usare come disturbo un cambiamento a nostro piacimento nelle condizioni iniziali.
+COme requisiti del nostro controllore, dato che vogliamo portare il chaser al target, dobbiamo avere una diminuzione drastica di velocità rispetto 
+al chaser nella fase di avvicinamento, e anche per come è fatta la stessa missione una diminuzione drastica della distanza, quindi come
+setpoint possiamo usare appunto sempre zero. 
+Quello che facciamo nella pratica quindi è porre come variabili di controllo gli stati (o - gli stati poi vediamo bene), moltiplicarli per dei guadagni e 
+usare il controllore in spazio di stato che per definizione funziona portando l'errore a zero. e poi possiamo giocare con i guadagni per vedere che succede, 
+tipo avvicinamento più lento e cose di questo genere. 
+
+
