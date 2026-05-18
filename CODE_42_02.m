@@ -394,6 +394,8 @@ legend('Location', 'best');
 axis equal; 
 view(30, 40); % Angolo per visualizzare bene la differenza lungo l'asse Y
 hold off;
+ylim([-900, 300]);
+xlim([-500, 300]);
 
 % figure('Name','3D Real-Time Trajectory Animation','NumberTitle','off');
 % hold on; grid on; axis equal; 
