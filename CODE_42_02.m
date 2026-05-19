@@ -474,28 +474,45 @@ xlim([-500, 300]);
 
 % Mantengo lo smorzamento sempre a 0.7 (valore ottimale)
 xi = 0.7;
-% Prima coppia di frequenze (w_c = 1 e w_c = 2)
-omega_n1_1 = 0.01; % Determina poli dominanti, più lenti)
+
+%i poli li mettiamo in questo modo perchè sostanzialmente il nostro sistema
+%è dato dalla somma di 3 sistemi del secondo ordine (approccio modale). 
+%è quindi utile trattare ogni coppia di poli come se fossero associati a un
+%sistema del secondo ordine. 
+
+omega_n1_1 = 0.002; 
 omega_d1_1 = omega_n1_1*sqrt(1-xi^2);
 pC_1_1 = -xi*omega_n1_1 + 1i*omega_d1_1;
 pC_2_1 = -xi*omega_n1_1 - 1i*omega_d1_1;
 
-omega_n2_1 = 0.02; % Determina poli ausiliari,  più veloci, es. 5-10x omega_n1_1
+omega_n2_1 = 0.002; 
 omega_d2_1 = omega_n2_1*sqrt(1-xi^2);
 pC_3_1 = -xi*omega_n2_1 + 1i*omega_d2_1;
 pC_4_1 = -xi*omega_n2_1 - 1i*omega_d2_1;
 
-omega_n2_1 = 0.05; % Determina terza coppia di poli,  più veloci, es. 5-10x omega_n1_1
-omega_d2_1 = omega_n2_1*sqrt(1-xi^2);
-pC_5_1 = -xi*omega_n2_1 + 1i*omega_d2_1;
-pC_6_1 = -xi*omega_n2_1 - 1i*omega_d2_1;
+omega_n3_1 = 0.002; 
+omega_d3_1 = omega_n3_1*sqrt(1-xi^2);
+pC_5_1 = -xi*omega_n3_1 + 1i*omega_d3_1;
+pC_6_1 = -xi*omega_n3_1 - 1i*omega_d3_1;
+
+%si trova sperimentalmente che 0.002 è una velocità per la quale il
+%controllore porta a termine la missione prima di T, economizzando molto il
+%carburante. Se volessimo ottimizzare il tempo, sarebbe sufficiente
+%utilizzare pulsazioni di ordini di grandezza maggiori. 
+%queste considerazioni w minore -> velocità di risposta minore derivano
+%dal fatto che omega finisce come esponente del termine esponenziale della
+%risposta libera del sistema alle condizioni iniziali: se io aumento il
+%valore dell'esponente, a un determinato tempo corrisponderà una maggior
+%caduta dell'esponenziale negativo, quindi una maggiore vicinanza della
+%posizione al set point. (si deduce anche da come è fatta la costante di
+%tempo, ma il ragionamento è analogo). 
 
 pC_1 = [pC_1_1 pC_2_1 pC_3_1 pC_4_1, pC_5_1, pC_6_1];
 B_u= [0,0,0;
-      0,0,0;
-      0,0,0;
       1,0,0;
+      0,0,0;
       0,1,0;
+      0,0,0;
       0,0,1];
 
 K_1 = place(A, B_u, pC_1); 
@@ -505,23 +522,17 @@ sys_cl_1=ss(A_c_1, [], C, D);
 t=0:0.01:T;
 % Risolvo
 x0 = stati_trans(:,end);
-[x_dot_1, t_out_1, x_out_1] = lsim(sys_cl_1, [], t, x0);
+[x_dot_1, t_out_1, x_out_1] = initial(sys_cl_1, x0, t);
 
-Co=ctrb(A, B_u);
-n=size(A,1);
-iscontrollable=(rank(Co)==n);
-if iscontrollable~=1
-    fprintf('Il sistema non è controllabile');
-end
-figure('Name', '6.2 Pole placement for system control')
-plot(t_out_1, x_out_1(:,1), LineWidth=2);
+figure('Name', 'Chaser to Target with Space-State Controller')
+plot(t_out_1, x_out_1(:,1), LineWidth=4);
 hold on;
-plot(t_out_1, x_out_1(:,3), LineWidth=2);
-plot(t_out_1, x_out_1(:,5), LineWidth=2);
+plot(t_out_1, x_out_1(:,3), LineWidth=4);
+plot(t_out_1, x_out_1(:,5), LineWidth=4);
 grid on;
-xlim ([0,1000])
+xlim ([0,5000])
 legend('x','y','z');
-title('Orbit A -- Target');
+title('Orbit A -> Target');
 
 
 % 6. Preparazione Dati per il Plot
