@@ -468,10 +468,135 @@ xlim([-500, 300]);
 % plot3(pos_T_L(1,end),  pos_T_L(2,end),  pos_T_L(3,end),  's', 'Color', col_L,  'MarkerFaceColor', col_L,  'MarkerSize', 10, 'Handlevisibility', 'off');
 % 
 % hold off;
+% 
+
+%% 6.1 COntrol Law Design and Validation
+
+% Mantengo lo smorzamento sempre a 0.7 (valore ottimale)
+xi = 0.7;
+% Prima coppia di frequenze (w_c = 1 e w_c = 2)
+omega_n1_1 = 0.01; % Determina poli dominanti, più lenti)
+omega_d1_1 = omega_n1_1*sqrt(1-xi^2);
+pC_1_1 = -xi*omega_n1_1 + 1i*omega_d1_1;
+pC_2_1 = -xi*omega_n1_1 - 1i*omega_d1_1;
+
+omega_n2_1 = 0.02; % Determina poli ausiliari,  più veloci, es. 5-10x omega_n1_1
+omega_d2_1 = omega_n2_1*sqrt(1-xi^2);
+pC_3_1 = -xi*omega_n2_1 + 1i*omega_d2_1;
+pC_4_1 = -xi*omega_n2_1 - 1i*omega_d2_1;
+
+omega_n2_1 = 0.05; % Determina terza coppia di poli,  più veloci, es. 5-10x omega_n1_1
+omega_d2_1 = omega_n2_1*sqrt(1-xi^2);
+pC_5_1 = -xi*omega_n2_1 + 1i*omega_d2_1;
+pC_6_1 = -xi*omega_n2_1 - 1i*omega_d2_1;
+
+pC_1 = [pC_1_1 pC_2_1 pC_3_1 pC_4_1, pC_5_1, pC_6_1];
+B_u= [0,0,0;
+      0,0,0;
+      0,0,0;
+      1,0,0;
+      0,1,0;
+      0,0,1];
+
+K_1 = place(A, B_u, pC_1); 
+A_c_1=A-B_u*K_1;
+
+sys_cl_1=ss(A_c_1, [], C, D);
+t=0:0.01:T;
+% Risolvo
+x0 = stati_trans(:,end);
+[x_dot_1, t_out_1, x_out_1] = lsim(sys_cl_1, [], t, x0);
+
+Co=ctrb(A, B_u);
+n=size(A,1);
+iscontrollable=(rank(Co)==n);
+if iscontrollable~=1
+    fprintf('Il sistema non è controllabile');
+end
+figure('Name', '6.2 Pole placement for system control')
+plot(t_out_1, x_out_1(:,1), LineWidth=2);
+hold on;
+plot(t_out_1, x_out_1(:,3), LineWidth=2);
+plot(t_out_1, x_out_1(:,5), LineWidth=2);
+grid on;
+xlim ([0,1000])
+legend('x','y','z');
+title('Orbit A -- Target');
 
 
-% 5.3 Advanced Trajectory Design.
+% 6. Preparazione Dati per il Plot
+% Estraiamo le posizioni (x, y, z) dai risultati calcolati
+% -- Modello NON Lineare --
+pos_D_NL = D_orbit(:, [1, 3, 5]);
+pos_T_NL = transfer_orbit(:, [1, 3, 5]);
 
+% -- Modello Lineare --
+pos_D_L = D_orbit_linear(:, [1, 3, 5]);
+pos_T_L = stati_trans([1, 3, 5],:);
+
+% -- Modello Controllato --
+% Estraiamo x, y, z dai risultati del lsim (colonne 1, 3, 5 del vettore di stato)
+pos_C_L = x_out_1(:, [1, 3, 5]); 
+
+% -- Orbita Target (A) di riferimento --
+% Ricalcoliamo 1 periodo dell'orbita bersaglio per contesto visivo
+t_A_vec = linspace(0, T, 1000);
+stati_A = getState(coeff_A, t_A_vec, n);
+pos_A_L = stati_A([1, 3, 5], :)'; % Trasposta per avere una matrice N x 3
+
+
+% 7. PLOT 3D: Confronto Lineare, Non Lineare e Controllato
+figure('Name','Comparison between Linear, Nonlinear and Controlled Models','NumberTitle','off');
+hold on; grid on;
+
+% Definizione colori per chiarezza
+col_A  = [0.50, 0.50, 0.50]; % Grigio per l'orbita bersaglio
+col_NL = [0.85, 0.33, 0.10]; % Rosso-Arancio per il Non Lineare
+col_L  = [0.00, 0.45, 0.74]; % Blu per il Lineare
+col_C  = [0.47, 0.67, 0.19]; % Verde per il sistema Controllato in retroazione
+
+% 1. Plot Orbita Target A (Sfondo)
+plot3(pos_A_L(:,1), pos_A_L(:,2), pos_A_L(:,3), ':', 'Color', col_A, 'LineWidth', 1.5, 'DisplayName', 'Orbit A Target');
+
+% 2. Plot Fase di Attesa sull'Orbita D
+plot3(pos_D_NL(:,1), pos_D_NL(:,2), pos_D_NL(:,3), '-', 'Color', col_NL, 'LineWidth', 1.5, 'DisplayName', 'Waiting time D (Non Linear)');
+plot3(pos_D_L(:,1), pos_D_L(:,2), pos_D_L(:,3), '--', 'Color', col_L, 'LineWidth', 1.5, 'DisplayName', 'Waiting time D (Linear)');
+
+% 3. Plot Fase di Trasferimento (Senza Controllo)
+plot3(pos_T_NL(:,1), pos_T_NL(:,2), pos_T_NL(:,3), '-', 'Color', col_NL, 'LineWidth', 2.5, 'DisplayName', 'Transfer (Non Linear)');
+plot3(pos_T_L(1,:), pos_T_L(2,:), pos_T_L(3,:), '--', 'Color', col_L, 'LineWidth', 2.5, 'DisplayName', 'Transfer (Linear)');
+
+% 3.1 Plot Fase di Trasferimento (CON Controllo)
+plot3(pos_C_L(:,1), pos_C_L(:,2), pos_C_L(:,3), '-', 'Color', col_C, 'LineWidth', 3, 'DisplayName', 'Transfer (Controlled)');
+
+% 4. MARKERS: Punti Notevoli
+% Punto di partenza comune (t=0)
+plot3(pos_D_L(1,1), pos_D_L(1,2), pos_D_L(1,3), 'ko', 'MarkerFaceColor', 'k', 'MarkerSize', 6, 'DisplayName', 'Start (t=0)');
+
+% Punto di applicazione del Delta-V 1 (Inizio manovra / attivazione controllo)
+plot3(pos_D_NL(end,1), pos_D_NL(end,2), pos_D_NL(end,3), 'o', 'Color', col_NL, 'MarkerFaceColor', col_NL, 'MarkerSize', 7, 'DisplayName', 'Impulse NL');
+plot3(pos_D_L(end,1), pos_D_L(end,2), pos_D_L(end,3), 'o', 'Color', col_L, 'MarkerFaceColor', col_L, 'MarkerSize', 7, 'DisplayName', 'Impulse Linear');
+plot3(pos_C_L(1,1), pos_C_L(1,2), pos_C_L(1,3), 'o', 'Color', col_C, 'MarkerFaceColor', col_C, 'MarkerSize', 7, 'DisplayName', 'Start Control');
+
+% Punto di Arrivo (Dove si vede l'errore calcolato nei sistemi ad anello aperto)
+plot3(pos_T_NL(end,1), pos_T_NL(end,2), pos_T_NL(end,3), 's', 'Color', col_NL, 'MarkerFaceColor', col_NL, 'MarkerSize', 10, 'DisplayName', 'Arrival NL');
+plot3(pos_T_L(1,end), pos_T_L(2,end), pos_T_L(3,end), 's', 'Color', col_L, 'MarkerFaceColor', col_L, 'MarkerSize', 10, 'DisplayName', 'Arrival Linear');
+
+% Punto di Arrivo Controllato (Dovrebbe essere all'origine)
+plot3(pos_C_L(end,1), pos_C_L(end,2), pos_C_L(end,3), 'p', 'Color', col_C, 'MarkerFaceColor', col_C, 'MarkerSize', 12, 'DisplayName', 'Arrival Controlled');
+
+% Origine (Target)
+plot3(0, 0, 0, 'k+', 'MarkerSize', 12, 'LineWidth', 2, 'DisplayName', 'Origin (Chief)');
+
+% 5. Formattazione del grafico
+xlabel('x [m]'); ylabel('y [m]'); zlabel('z [m]');
+title('Comparison between Linear, Nonlinear and Controlled Models');
+legend('Location', 'best');
+axis equal; 
+view(70,50); % Angolo per visualizzare bene la differenza lungo l'asse Y
+hold off;
+ylim([-900, 300]);
+xlim([-500, 300]);
 %% ----------------------- Definizione Funzioni ---------------------------
 % Struttura contenente dati del problema
 function proximityP = proximity_parameters()
