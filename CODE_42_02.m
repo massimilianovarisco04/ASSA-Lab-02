@@ -618,18 +618,18 @@ xlim([-500, 300]);
 % Definizione parametri iniziali: trovo posizione e velocità di A dopo
 % mezzo periodo di free-flight del chaser
 
-t_vec = linspace(0, t_wait_opt+t_tof_opt, 500);
+t_vec = linspace(0, t_wait_opt+t_tof_opt + tau_opt, 500);
 stati_A_ind = getState(coeff_A, t_vec, n);
 t_0_mezza_orbita = 0;
 t_f_mezza_orbita = T/2;
 
 
-dv2 = A_orbit_linear([2, 4, 6], end) - stati_A_ind([2,4,6],end);
-x0 = A_orbit_linear(:,end) + ([0, dv2(1), 0, dv2(2), 0, dv2(3)]');
+dv2 = stati_A_ind([2,4,6],end) - A_orbit_linear([2, 4, 6], end);
+x0 = transfer_orbit(end,:) + ([0, dv2(1), 0, dv2(2), 0, dv2(3)]);
 
 ODE_obj = ode;  
     ODE_obj.ODEFcn = @(t,x) proximityP_f(t,x, proximityP);
-    ODE_obj.InitialValue = x0;
+    ODE_obj.InitialValue = x0';
     ODE_obj.Solver = 'ode45';
     ODEResults_obj = solve(ODE_obj, t_0_mezza_orbita, t_f_mezza_orbita);
     t_mezza_orbita = ODEResults_obj.Time'; 
@@ -675,12 +675,12 @@ col_C  = [0.47, 0.67, 0.19]; % Verde per il sistema Controllato in retroazione
 plot3(pos_A_L(:,1), pos_A_L(:,2), pos_A_L(:,3), ':', 'Color', col_A, 'LineWidth', 1.5, 'DisplayName', 'Orbit A Target');
 
 % 2. Plot Fase di Attesa sull'Orbita D
-% plot3(pos_D_NL(:,1), pos_D_NL(:,2), pos_D_NL(:,3), '-', 'Color', col_NL, 'LineWidth', 1.5, 'DisplayName', 'Waiting time D (Non Linear)');
-plot3(pos_D_L(:,1), pos_D_L(:,2), pos_D_L(:,3), '--', 'Color', col_L, 'LineWidth', 1.5, 'DisplayName', 'Waiting time D (Linear)');
+plot3(pos_D_NL(:,1), pos_D_NL(:,2), pos_D_NL(:,3), '-', 'Color', col_NL, 'LineWidth', 1.5, 'DisplayName', 'Waiting time D (Non Linear)');
+% plot3(pos_D_L(:,1), pos_D_L(:,2), pos_D_L(:,3), '--', 'Color', col_L, 'LineWidth', 1.5, 'DisplayName', 'Waiting time D (Linear)');
 
 % 3. Plot Fase di Trasferimento (Senza Controllo)
-% plot3(pos_T_NL(:,1), pos_T_NL(:,2), pos_T_NL(:,3), '-', 'Color', col_NL, 'LineWidth', 2.5, 'DisplayName', 'Transfer (Non Linear)');
-plot3(pos_T_L(1,:), pos_T_L(2,:), pos_T_L(3,:), '--', 'Color', col_L, 'LineWidth', 2.5, 'DisplayName', 'Transfer (Linear)');
+plot3(pos_T_NL(:,1), pos_T_NL(:,2), pos_T_NL(:,3), '-', 'Color', col_NL, 'LineWidth', 2.5, 'DisplayName', 'Transfer (Non Linear)');
+% plot3(pos_T_L(1,:), pos_T_L(2,:), pos_T_L(3,:), '--', 'Color', col_L, 'LineWidth', 2.5, 'DisplayName', 'Transfer (Linear)');
 
 % Plotto mezzo periodo sull'orbita A
 plot3(x_mezza_orbita(:,1), x_mezza_orbita(:,3), x_mezza_orbita(:,5), 'LineWidth', 2);
@@ -690,7 +690,7 @@ plot3(x_out(:,1), x_out(:,3), x_out(:,5), '-', 'Color', col_C, 'LineWidth', 3, '
 
 % % 4. MARKERS: Punti Notevoli
  % Punto di partenza comune (t=0)
-plot3(stati_A_ind(1,end), stati_A_ind(3,end), stati_A_ind(5,end), 'ko', 'MarkerFaceColor', 'k', 'MarkerSize', 6, 'DisplayName', 'Start (t=0)');
+% plot3(stati_A_ind(1,end), stati_A_ind(3,end), stati_A_ind(5,end), 'ko', 'MarkerFaceColor', 'k', 'MarkerSize', 6, 'DisplayName', 'Start (t=0)');
 % 
 % % Punto di applicazione del Delta-V 1 (Inizio manovra / attivazione controllo)
 % plot3(pos_D_NL(end,1), pos_D_NL(end,2), pos_D_NL(end,3), 'o', 'Color', col_NL, 'MarkerFaceColor', col_NL, 'MarkerSize', 7, 'DisplayName', 'Impulse NL');
@@ -698,8 +698,8 @@ plot3(stati_A_ind(1,end), stati_A_ind(3,end), stati_A_ind(5,end), 'ko', 'MarkerF
 % plot3(pos_C_L(1,1), pos_C_L(1,2), pos_C_L(1,3), 'o', 'Color', col_C, 'MarkerFaceColor', col_C, 'MarkerSize', 7, 'DisplayName', 'Start Control');
 % 
 % % Punto di Arrivo (Dove si vede l'errore calcolato nei sistemi ad anello aperto)
-% plot3(pos_T_NL(end,1), pos_T_NL(end,2), pos_T_NL(end,3), 's', 'Color', col_NL, 'MarkerFaceColor', col_NL, 'MarkerSize', 10, 'DisplayName', 'Arrival NL');
- plot3(pos_T_L(1,end), pos_T_L(2,end), pos_T_L(3,end), 's', 'Color', col_L, 'MarkerFaceColor', col_L, 'MarkerSize', 10, 'DisplayName', 'Arrival Linear');
+ plot3(pos_T_NL(end,1), pos_T_NL(end,2), pos_T_NL(end,3), 's', 'Color', col_NL, 'MarkerFaceColor', col_NL, 'MarkerSize', 10, 'DisplayName', 'Arrival NL');
+ %plot3(pos_T_L(1,end), pos_T_L(2,end), pos_T_L(3,end), 's', 'Color', col_L, 'MarkerFaceColor', col_L, 'MarkerSize', 10, 'DisplayName', 'Arrival Linear');
 % 
  % Punto di Arrivo Controllato (Dovrebbe essere all'origine)
 % plot3(pos_C_L(end,1), pos_C_L(end,2), pos_C_L(end,3), 'p', 'Color', col_C, 'MarkerFaceColor', col_C, 'MarkerSize', 12, 'DisplayName', 'Arrival Controlled');
