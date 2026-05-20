@@ -717,6 +717,26 @@ hold off;
 % ylim([-900, 300]);
 % xlim([-500, 300]);
 
+%% 7 simulink
+ex = sim("simulink_02_nonlinear.slx");
+
+% plot 3D
+figure('Name','Simulink');
+plot3(ex.x,ex.y,ex.z);
+hold on;
+grid on;
+% Origine (Target)
+plot3(0, 0, 0, 'k+', 'MarkerSize', 12, 'LineWidth', 2, 'DisplayName', 'Origin (Chief)');
+
+% 5. Formattazione del grafico
+xlabel('x [m]'); ylabel('y [m]'); zlabel('z [m]');
+title('Comparison between Linear, Nonlinear and Controlled Models');
+legend('Location', 'best');
+axis equal; 
+view(70,50); % Angolo per visualizzare bene la differenza lungo l'asse Y
+hold off;
+ylim([-900, 300]);
+xlim([-500, 300]);
 
 %% ----------------------- Definizione Funzioni ---------------------------
 % Struttura contenente dati del problema
