@@ -307,10 +307,10 @@ stato_dopo_dv1 = stati_wait(:, end);
 stato_dopo_dv1([2,4,6]) = stato_dopo_dv1([2,4,6]) + [Dvx;Dvy;Dvz]; % Applico DV1
 coeff_T = S \ stato_dopo_dv1;
 t_tof_vec = linspace(0, t_tof_opt, 500);
-stati_trans = getState(coeff_T, t_tof_vec, n);
+A_orbit_linear = getState(coeff_T, t_tof_vec, n);
 
-delta_pos=transfer_orbit(end,[1,3,5])-stati_trans([1,3,5],end)';
-delta_vel=transfer_orbit(end,[2,4,6])-stati_trans([2,4,6],end)';
+delta_pos=transfer_orbit(end,[1,3,5])-A_orbit_linear([1,3,5],end)';
+delta_vel=transfer_orbit(end,[2,4,6])-A_orbit_linear([2,4,6],end)';
 disp(delta_pos);
 disp(delta_vel);
 
@@ -324,7 +324,7 @@ pos_T_NL = transfer_orbit(:, [1, 3, 5]);
 
 % -- Modello Lineare --
 pos_D_L = D_orbit_linear(:, [1, 3, 5]);
-pos_T_L = stati_trans([1, 3, 5],:);
+pos_T_L = A_orbit_linear([1, 3, 5],:);
 
 % -- Orbita Target (A) di riferimento --
 % Ricalcoliamo 1 periodo dell'orbita bersaglio per contesto visivo
@@ -521,7 +521,7 @@ A_c_1=A-B_u*K_1;
 sys_cl_1=ss(A_c_1, [], C, D);
 t=0:0.01:T;
 % Risolvo
-x0 = stati_trans(:,end);
+x0 = A_orbit_linear(:,end);
 [x_dot_1, t_out_1, x_out_1] = initial(sys_cl_1, x0, t);
 
 figure('Name', 'Chaser to Target with Space-State Controller')
@@ -543,7 +543,7 @@ pos_T_NL = transfer_orbit(:, [1, 3, 5]);
 
 % -- Modello Lineare --
 pos_D_L = D_orbit_linear(:, [1, 3, 5]);
-pos_T_L = stati_trans([1, 3, 5],:);
+pos_T_L = A_orbit_linear([1, 3, 5],:);
 
 % -- Modello Controllato --
 % Estraiamo x, y, z dai risultati del lsim (colonne 1, 3, 5 del vettore di stato)
