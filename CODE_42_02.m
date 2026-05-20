@@ -307,12 +307,17 @@ stato_dopo_dv1 = stati_wait(:, end);
 stato_dopo_dv1([2,4,6]) = stato_dopo_dv1([2,4,6]) + [Dvx;Dvy;Dvz]; % Applico DV1
 coeff_T = S \ stato_dopo_dv1;
 t_tof_vec = linspace(0, t_tof_opt, 500);
-stati_trans = getState(coeff_T, t_tof_vec, n);
+A_orbit_linear = getState(coeff_T, t_tof_vec, n);
 
-delta_pos=transfer_orbit(end,[1,3,5])-stati_trans([1,3,5],end)';
-delta_vel=transfer_orbit(end,[2,4,6])-stati_trans([2,4,6],end)';
+delta_pos=transfer_orbit(end,[1,3,5])-A_orbit_linear([1,3,5],end)';
+delta_vel=transfer_orbit(end,[2,4,6])-A_orbit_linear([2,4,6],end)';
 disp(delta_pos);
 disp(delta_vel);
+
+t_vec = linspace(0, t_wait_opt+t_tof_opt, 500);
+stati_A_ind = getState(coeff_A, t_vec, n);
+
+dv2 = A_orbit_linear([2, 4, 6], end) - stati_A_ind([2,4,6],end);
 
 % 6. Preparazione Dati per il Plot
 % Estraiamo le posizioni (x, y, z) dai risultati calcolati al punto 5.
@@ -324,7 +329,7 @@ pos_T_NL = transfer_orbit(:, [1, 3, 5]);
 
 % -- Modello Lineare --
 pos_D_L = D_orbit_linear(:, [1, 3, 5]);
-pos_T_L = stati_trans([1, 3, 5],:);
+pos_T_L = A_orbit_linear([1, 3, 5],:);
 
 % -- Orbita Target (A) di riferimento --
 % Ricalcoliamo 1 periodo dell'orbita bersaglio per contesto visivo
@@ -521,7 +526,7 @@ A_c_1=A-B_u*K_1;
 sys_cl_1=ss(A_c_1, [], C, D);
 t=0:0.01:T;
 % Risolvo
-x0 = stati_trans(:,end);
+x0 = A_orbit_linear(:,end);
 [x_dot_1, t_out_1, x_out_1] = initial(sys_cl_1, x0, t);
 
 figure('Name', 'Chaser to Target with Space-State Controller')
@@ -543,7 +548,7 @@ pos_T_NL = transfer_orbit(:, [1, 3, 5]);
 
 % -- Modello Lineare --
 pos_D_L = D_orbit_linear(:, [1, 3, 5]);
-pos_T_L = stati_trans([1, 3, 5],:);
+pos_T_L = A_orbit_linear([1, 3, 5],:);
 
 % -- Modello Controllato --
 % Estraiamo x, y, z dai risultati del lsim (colonne 1, 3, 5 del vettore di stato)
@@ -608,6 +613,111 @@ view(70,50); % Angolo per visualizzare bene la differenza lungo l'asse Y
 hold off;
 ylim([-900, 300]);
 xlim([-500, 300]);
+
+%% 6.2 Nonlinear Closed-loop Simulation
+% Definizione parametri iniziali: trovo posizione e velocità di A dopo
+% mezzo periodo di free-flight del chaser
+
+t_vec = linspace(0, t_wait_opt+t_tof_opt, 500);
+stati_A_ind = getState(coeff_A, t_vec, n);
+t_0_mezza_orbita = 0;
+t_f_mezza_orbita = T/2;
+
+
+dv2 = A_orbit_linear([2, 4, 6], end) - stati_A_ind([2,4,6],end);
+x0 = A_orbit_linear(:,end) + ([0, dv2(1), 0, dv2(2), 0, dv2(3)]');
+
+ODE_obj = ode;  
+    ODE_obj.ODEFcn = @(t,x) proximityP_f(t,x, proximityP);
+    ODE_obj.InitialValue = x0;
+    ODE_obj.Solver = 'ode45';
+    ODEResults_obj = solve(ODE_obj, t_0_mezza_orbita, t_f_mezza_orbita);
+    t_mezza_orbita = ODEResults_obj.Time'; 
+    x_mezza_orbita = (ODEResults_obj.Solution'); 
+
+% Uso come condizioni iniziali quelle nell'orbita A dopo un free-flight di
+% mezzo periodo
+
+[t_out, x_out] = ode45(@(t,x) closed_loop_nonlinear(t, x, K_1, proximityP), t, x_mezza_orbita(end, :));
+
+% 6. Preparazione Dati per il Plot
+% Estraiamo le posizioni (x, y, z) dai risultati calcolati
+% -- Modello NON Lineare --
+pos_D_NL = D_orbit(:, [1, 3, 5]);
+pos_T_NL = transfer_orbit(:, [1, 3, 5]);
+
+% -- Modello Lineare --
+pos_D_L = D_orbit_linear(:, [1, 3, 5]);
+pos_T_L = A_orbit_linear([1, 3, 5],:);
+
+% -- Modello Controllato --
+% Estraiamo x, y, z dai risultati del lsim (colonne 1, 3, 5 del vettore di stato)
+pos_C_L = x_out_1(:, [1, 3, 5]); 
+
+% -- Orbita Target (A) di riferimento --
+% Ricalcoliamo 1 periodo dell'orbita bersaglio per contesto visivo
+t_A_vec = linspace(0, T, 1000);
+stati_A = getState(coeff_A, t_A_vec, n);
+pos_A_L = stati_A([1, 3, 5], :)'; % Trasposta per avere una matrice N x 3
+
+
+% 7. PLOT 3D: Confronto Lineare, Non Lineare e Controllato
+figure('Name','Comparison between Linear, Nonlinear and Controlled Models','NumberTitle','off');
+hold on; grid on;
+
+% Definizione colori per chiarezza
+col_A  = [0.50, 0.50, 0.50]; % Grigio per l'orbita bersaglio
+col_NL = [0.85, 0.33, 0.10]; % Rosso-Arancio per il Non Lineare
+col_L  = [0.00, 0.45, 0.74]; % Blu per il Lineare
+col_C  = [0.47, 0.67, 0.19]; % Verde per il sistema Controllato in retroazione
+
+% 1. Plot Orbita Target A (Sfondo)
+plot3(pos_A_L(:,1), pos_A_L(:,2), pos_A_L(:,3), ':', 'Color', col_A, 'LineWidth', 1.5, 'DisplayName', 'Orbit A Target');
+
+% 2. Plot Fase di Attesa sull'Orbita D
+% plot3(pos_D_NL(:,1), pos_D_NL(:,2), pos_D_NL(:,3), '-', 'Color', col_NL, 'LineWidth', 1.5, 'DisplayName', 'Waiting time D (Non Linear)');
+plot3(pos_D_L(:,1), pos_D_L(:,2), pos_D_L(:,3), '--', 'Color', col_L, 'LineWidth', 1.5, 'DisplayName', 'Waiting time D (Linear)');
+
+% 3. Plot Fase di Trasferimento (Senza Controllo)
+% plot3(pos_T_NL(:,1), pos_T_NL(:,2), pos_T_NL(:,3), '-', 'Color', col_NL, 'LineWidth', 2.5, 'DisplayName', 'Transfer (Non Linear)');
+plot3(pos_T_L(1,:), pos_T_L(2,:), pos_T_L(3,:), '--', 'Color', col_L, 'LineWidth', 2.5, 'DisplayName', 'Transfer (Linear)');
+
+% Plotto mezzo periodo sull'orbita A
+plot3(x_mezza_orbita(:,1), x_mezza_orbita(:,3), x_mezza_orbita(:,5), 'LineWidth', 2);
+
+% 3.1 Plot Fase di Trasferimento (CON Controllo)
+plot3(x_out(:,1), x_out(:,3), x_out(:,5), '-', 'Color', col_C, 'LineWidth', 3, 'DisplayName', 'Transfer (Controlled)');
+
+% % 4. MARKERS: Punti Notevoli
+ % Punto di partenza comune (t=0)
+plot3(stati_A_ind(1,end), stati_A_ind(3,end), stati_A_ind(5,end), 'ko', 'MarkerFaceColor', 'k', 'MarkerSize', 6, 'DisplayName', 'Start (t=0)');
+% 
+% % Punto di applicazione del Delta-V 1 (Inizio manovra / attivazione controllo)
+% plot3(pos_D_NL(end,1), pos_D_NL(end,2), pos_D_NL(end,3), 'o', 'Color', col_NL, 'MarkerFaceColor', col_NL, 'MarkerSize', 7, 'DisplayName', 'Impulse NL');
+% plot3(pos_D_L(end,1), pos_D_L(end,2), pos_D_L(end,3), 'o', 'Color', col_L, 'MarkerFaceColor', col_L, 'MarkerSize', 7, 'DisplayName', 'Impulse Linear');
+% plot3(pos_C_L(1,1), pos_C_L(1,2), pos_C_L(1,3), 'o', 'Color', col_C, 'MarkerFaceColor', col_C, 'MarkerSize', 7, 'DisplayName', 'Start Control');
+% 
+% % Punto di Arrivo (Dove si vede l'errore calcolato nei sistemi ad anello aperto)
+% plot3(pos_T_NL(end,1), pos_T_NL(end,2), pos_T_NL(end,3), 's', 'Color', col_NL, 'MarkerFaceColor', col_NL, 'MarkerSize', 10, 'DisplayName', 'Arrival NL');
+ plot3(pos_T_L(1,end), pos_T_L(2,end), pos_T_L(3,end), 's', 'Color', col_L, 'MarkerFaceColor', col_L, 'MarkerSize', 10, 'DisplayName', 'Arrival Linear');
+% 
+ % Punto di Arrivo Controllato (Dovrebbe essere all'origine)
+% plot3(pos_C_L(end,1), pos_C_L(end,2), pos_C_L(end,3), 'p', 'Color', col_C, 'MarkerFaceColor', col_C, 'MarkerSize', 12, 'DisplayName', 'Arrival Controlled');
+
+% Origine (Target)
+plot3(0, 0, 0, 'k+', 'MarkerSize', 12, 'LineWidth', 2, 'DisplayName', 'Origin (Chief)');
+
+% 5. Formattazione del grafico
+xlabel('x [m]'); ylabel('y [m]'); zlabel('z [m]');
+title('Comparison between Linear, Nonlinear and Controlled Models');
+legend('Location', 'best');
+axis equal; 
+view(70,50); % Angolo per visualizzare bene la differenza lungo l'asse Y
+hold off;
+% ylim([-900, 300]);
+% xlim([-500, 300]);
+
+
 %% ----------------------- Definizione Funzioni ---------------------------
 % Struttura contenente dati del problema
 function proximityP = proximity_parameters()
@@ -651,6 +761,30 @@ function xdot = proximityP_f (t,x, proximityP)
     xdot = [xdot_1, xdot_2, xdot_3, xdot_4, xdot_5, xdot_6]';
 end
 
+function xdot = proximityP_non_linear (t,x, proximityP, u_c)
+    mu = proximityP.mu;
+    R0 = proximityP.R0;
+    n  = proximityP.n;
+
+    x1 = x(1);
+    x2 = x(2);
+    x3 = x(3);
+    x4 = x(4);
+    x5 = x(5);
+    x6 = x(6);
+
+    rc = sqrt((R0+x1)^2 + x3^2 + x5^2);
+
+    xdot_1 = x2;
+    xdot_2 = 2*n*x4 + n^2*(R0+x1) - (mu*(R0+x1))/rc^3+u_c(1);
+    xdot_3 = x4;
+    xdot_4 = -2*n*x2 + n^2*x3-(mu*x3)/(rc^3)+u_c(2);
+    xdot_5 = x6;
+    xdot_6 = -(mu*x5)/rc^3+u_c(3);
+
+    xdot = [xdot_1, xdot_2, xdot_3, xdot_4, xdot_5, xdot_6]';
+end
+
 function J = objective_dv(u, xD_start, coeff_A, S, n) 
 %minimizza il DV totale considerando il boost iniziale e il boost finale per entrare in traiettoria
     dv1    = u(1:3);
@@ -675,8 +809,36 @@ function J = objective_dv(u, xD_start, coeff_A, S, n)
     
     % 5. Il DV2 è la differenza di velocità per restare su A
     dv2_mag = norm(stato_arrivo([2,4,6]) - stato_A([2,4,6]));
+    dv2 = (stato_arrivo([2,4,6]) - stato_A([2,4,6]));
     
     J = norm(dv1) + dv2_mag;
+end
+
+function dv2 = dv_2(u, xD_start, coeff_A, S, n) 
+%minimizza il DV totale considerando il boost iniziale e il boost finale per entrare in traiettoria
+    dv1    = u(1:3);
+    t_wait = u(4);
+    t_tof  = u(5);
+    tau    = u(6);
+    
+    % 1. Propago l'orbita D fino al tempo di accensione
+    coeff_D = S \ xD_start;
+    stato_partenza = getState(coeff_D, t_wait, n);
+    
+    % 2. Applico DV1 alle velocità
+    stato_dopo_dv1 = stato_partenza;
+    stato_dopo_dv1([2,4,6]) = stato_dopo_dv1([2,4,6]) + dv1(:);
+    
+    % 3. Trovo coefficienti trasferimento e propago per il tempo di volo
+    coeff_T = S \ stato_dopo_dv1;
+    stato_arrivo = getState(coeff_T, t_tof, n);
+    
+    % 4. Valuto la velocità dell'orbita A nel punto di inserimento
+    stato_A = getState(coeff_A, t_wait + t_tof + tau, n);
+    
+    % 5. Il DV2 è la differenza di velocità tra orbita A e punto di arrivo
+    dv2 = stato_arrivo([2,4,6]) - stato_A([2,4,6]);
+    
 end
 
 function [c, ceq] = constraints_pos(u, xD_start, coeff_A, S, n) 
@@ -704,6 +866,7 @@ function [c, ceq] = constraints_pos(u, xD_start, coeff_A, S, n)
 end
 
 function state = getState(coeff, t, n) %funzione che calcola velocità e posizione a partire da t (vettore o scalare)
+
     x = real(coeff(1)*exp(1i*n*t) + coeff(2)*exp(-1i*n*t) + 2*(coeff(4)/n));
     y = real(coeff(3) - 3*coeff(4)*t + 2*1i*(coeff(1)*exp(1i*n*t) - coeff(2)*exp(-1i*n*t)));
     z = real(coeff(5)*exp(1i*n*t) + coeff(6)*exp(-1i*n*t));
@@ -713,4 +876,16 @@ function state = getState(coeff, t, n) %funzione che calcola velocità e posizio
     vz = real(1i*n*coeff(5)*exp(1i*n*t) - 1i*n*coeff(6)*exp(-1i*n*t));
     
     state = [x; vx; y; vy; z; vz];
+end
+
+
+function dx_t = closed_loop_nonlinear(t, x, K, proximityP)
+
+    % Legge di controllo 
+    u_c = -K*x;
+
+    % Sistema NONLINEARE 
+    x_dot = proximityP_non_linear (t,x, proximityP, u_c);
+
+    dx_t = x_dot;
 end
