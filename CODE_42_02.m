@@ -506,6 +506,13 @@ pC_6_1 = -xi*omega_n3_1 - 1i*omega_d3_1;
 
 pC_1 = [pC_1_1 pC_2_1 pC_3_1 pC_4_1, pC_5_1, pC_6_1];
 
+B_u = [0,0,0;
+    1,0,0;
+    0,0,0;
+    0,1,0;
+    0,0,0;
+    0,0,1];
+
 K_1 = place(A, B_u, pC_1); 
 A_c_1=A-B_u*K_1;
 
@@ -833,15 +840,20 @@ hold off;
 mu = proximityP.mu;
 R0 = proximityP.R0;
 T  = proximityP.T;
-ta = T;             % tempo della fase Homing (a) 
-tb = ta + t_tof_opt; % tempo di trasferimento da D ad A (b)
-tc = tb + 0.5*T;    % tempo di permanenza su A prima di andare sul target (c)
-td = tc + 1.5*T;    % tempo di approccio al target e verifico che il sistema stia vicino realmente (d)
+ta = t_wait_opt;      % tempo della fase Homing (a) 
+tb = ta + t_tof_opt;  % tempo di trasferimento da D ad A (b)
+tc = tb + 0.5*T;      % tempo di permanenza su A prima di andare sul target (c)
+td = tc + 1.5*T;      % tempo di approccio al target e verifico che il sistema stia vicino realmente (d)
 
-%ex = sim("simulink_02_nonlinear.slx");
+ex = sim("simulink_02_nonlinear.slx");
 
-
-
+figure('Name','Simulink Simulation')
+plot3(ex.x_a,ex.y_a,ex.z_a,'LineWidth',1.5,'Color',col_NL);
+hold on;
+grid on;
+legend('Orbit D');
+ylim([-900, 300]);
+xlim([-500, 300]);
 %% ----------------------- Definizione Funzioni ---------------------------
 % Struttura contenente dati del problema
 function proximityP = proximity_parameters()
