@@ -475,7 +475,7 @@ xlim([-500, 300]);
 % hold off;
 % 
 
-%% 6.1 COntrol Law Design and Validation
+%% 6.1 Control Law Design and Validation
 
 % Mantengo lo smorzamento sempre a 0.7 (valore ottimale)
 xi = 0.7;
@@ -485,7 +485,11 @@ xi = 0.7;
 %è quindi utile trattare ogni coppia di poli come se fossero associati a un
 %sistema del secondo ordine. 
 
-omega_n1_1 = 0.002; 
+% Scelgo 3 triplette diverse di omega per mostrare come posizione e velocità
+% del sistema reagiscono a diversi design del controllore
+
+% Prima tripletta (0.001, 0.002, 0.005)
+omega_n1_1 = 0.001; 
 omega_d1_1 = omega_n1_1*sqrt(1-xi^2);
 pC_1_1 = -xi*omega_n1_1 + 1i*omega_d1_1;
 pC_2_1 = -xi*omega_n1_1 - 1i*omega_d1_1;
@@ -495,10 +499,17 @@ omega_d2_1 = omega_n2_1*sqrt(1-xi^2);
 pC_3_1 = -xi*omega_n2_1 + 1i*omega_d2_1;
 pC_4_1 = -xi*omega_n2_1 - 1i*omega_d2_1;
 
-omega_n3_1 = 0.002; 
+omega_n3_1 = 0.005; 
 omega_d3_1 = omega_n3_1*sqrt(1-xi^2);
 pC_5_1 = -xi*omega_n3_1 + 1i*omega_d3_1;
 pC_6_1 = -xi*omega_n3_1 - 1i*omega_d3_1;
+
+pC_1 = [pC_1_1 pC_2_1 pC_3_1 pC_4_1, pC_5_1, pC_6_1];
+
+K_1 = place(A, B_u, pC_1); 
+A_c_1=A-B_u*K_1;
+
+sys_cl_1=ss(A_c_1, [], C, D);
 
 %si trova sperimentalmente che 0.002 è una velocità per la quale il
 %controllore porta a termine la missione prima di T, economizzando molto il
@@ -512,33 +523,131 @@ pC_6_1 = -xi*omega_n3_1 - 1i*omega_d3_1;
 %posizione al set point. (si deduce anche da come è fatta la costante di
 %tempo, ma il ragionamento è analogo). 
 
-pC_1 = [pC_1_1 pC_2_1 pC_3_1 pC_4_1, pC_5_1, pC_6_1];
-B_u= [0,0,0;
-      1,0,0;
-      0,0,0;
-      0,1,0;
-      0,0,0;
-      0,0,1];
+% Seconda tripletta (0.1, 0.2, 0.5)
+omega_n1_2 = 0.01; 
+omega_d1_2 = omega_n1_2*sqrt(1-xi^2);
+pC_1_2 = -xi*omega_n1_2 + 1i*omega_d1_2;
+pC_2_2 = -xi*omega_n1_2 - 1i*omega_d1_2;
 
-K_1 = place(A, B_u, pC_1); 
-A_c_1=A-B_u*K_1;
+omega_n2_2 = 0.02; 
+omega_d2_2 = omega_n2_2*sqrt(1-xi^2);
+pC_3_2 = -xi*omega_n2_2 + 1i*omega_d2_2;
+pC_4_2 = -xi*omega_n2_2 - 1i*omega_d2_2;
 
-sys_cl_1=ss(A_c_1, [], C, D);
-t=0:0.01:T;
+omega_n3_2 = 0.05; 
+omega_d3_2 = omega_n3_2*sqrt(1-xi^2);
+pC_5_2 = -xi*omega_n3_2 + 1i*omega_d3_2;
+pC_6_2 = -xi*omega_n3_2 - 1i*omega_d3_2;
+
+pC_2 = [pC_1_2 pC_2_2 pC_3_2 pC_4_2, pC_5_2, pC_6_2];
+
+K_2 = place(A, B_u, pC_2); 
+A_c_2=A-B_u*K_2;
+
+sys_cl_2=ss(A_c_2, [], C, D);
+
+% Terza tripletta (1, 2, 5)
+omega_n1_3 = 1; 
+omega_d1_3 = omega_n1_3*sqrt(1-xi^2);
+pC_1_3 = -xi*omega_n1_3 + 1i*omega_d1_3;
+pC_2_3 = -xi*omega_n1_3 - 1i*omega_d1_3;
+
+omega_n2_3 = 2; 
+omega_d2_3 = omega_n2_3*sqrt(1-xi^2);
+pC_3_3 = -xi*omega_n2_3 + 1i*omega_d2_3;
+pC_4_3 = -xi*omega_n2_3 - 1i*omega_d2_3;
+
+omega_n3_3 = 5; 
+omega_d3_3 = omega_n3_3*sqrt(1-xi^2);
+pC_5_3 = -xi*omega_n3_3 + 1i*omega_d3_3;
+pC_6_3 = -xi*omega_n3_3 - 1i*omega_d3_3;
+
+pC_3 = [pC_1_3 pC_2_3 pC_3_3 pC_4_3, pC_5_3, pC_6_3];
+
+K_3 = place(A, B_u, pC_3); 
+A_c_3=A-B_u*K_3;
+
+sys_cl_3=ss(A_c_3, [], C, D);
+
 % Risolvo
+t=0:0.01:T;
 x0 = A_orbit_linear(:,end);
 [x_dot_1, t_out_1, x_out_1] = initial(sys_cl_1, x0, t);
+[x_dot_2, t_out_2, x_out_2] = initial(sys_cl_2, x0, t);
+[x_dot_3, t_out_3, x_out_3] = initial(sys_cl_3, x0, t);
 
 figure('Name', 'Chaser to Target with Space-State Controller')
-plot(t_out_1, x_out_1(:,1), LineWidth=4);
+subplot(3,2,1)
+plot(t_out_1, x_out_1(:,1), 'LineWidth', 2);
 hold on;
-plot(t_out_1, x_out_1(:,3), LineWidth=4);
-plot(t_out_1, x_out_1(:,5), LineWidth=4);
+plot(t_out_1, x_out_1(:,3), 'LineWidth', 2);
+plot(t_out_1, x_out_1(:,5), 'LineWidth', 2);
 grid on;
 xlim ([0,5000])
-legend('x','y','z');
-title('Orbit A -> Target');
+xlabel('Time [s]');
+ylabel('Position [m]');
+legend('x(t)','y(t)','z(t)');
+title('Controller to minimize fuel consumption (first triplet) - position');
 
+subplot(3,2,2)
+plot(t_out_1, x_out_1(:,2), 'LineWidth', 2);
+hold on;
+plot(t_out_1, x_out_1(:,4), 'LineWidth', 2);
+plot(t_out_1, x_out_1(:,6), 'LineWidth', 2);
+grid on;
+xlim ([0,5000]);
+xlabel('Time [s]');
+ylabel('Velocity [m/s]');
+legend('ẋ(t)','ẏ(t)','ż(t)');
+title('Controller to minimize fuel consumption (first triplet) - velocities');
+
+subplot(3,2,3)
+plot(t_out_2, x_out_2(:,1), 'LineWidth', 2);
+hold on;
+plot(t_out_2, x_out_2(:,3), 'LineWidth', 2);
+plot(t_out_2, x_out_2(:,5), 'LineWidth', 2);
+grid on;
+xlim ([0,500]);
+xlabel('Time [s]');
+ylabel('Position [m]');
+legend('x(t)','y(t)','z(t)');
+title('System with state space controller (second triplet) - position');
+
+subplot(3,2,4)
+plot(t_out_2, x_out_2(:,2), 'LineWidth', 2);
+hold on;
+plot(t_out_2, x_out_2(:,4), 'LineWidth', 2);
+plot(t_out_2, x_out_2(:,6), 'LineWidth', 2);
+grid on;
+xlim ([0,500])
+xlabel('Time [s]');
+ylabel('Velocity [m/s]');
+legend('ẋ(t)','ẏ(t)','ż(t)');
+title('System with state space controller (second triplet) - velocities');
+
+subplot(3,2,5)
+plot(t_out_3, x_out_3(:,1), 'LineWidth', 2);
+hold on;
+plot(t_out_3, x_out_3(:,3), 'LineWidth', 2);
+plot(t_out_3, x_out_3(:,5), 'LineWidth', 2);
+grid on;
+xlim ([0,10]);
+xlabel('Time [s]');
+ylabel('Position [m]');
+legend('x(t)','y(t)','z(t)');
+title('Controller to minimize final velocity (third triplet) - position');
+
+subplot(3,2,6)
+plot(t_out_3, x_out_3(:,2), 'LineWidth', 2);
+hold on;
+plot(t_out_3, x_out_3(:,4), 'LineWidth', 2);
+plot(t_out_3, x_out_3(:,6), 'LineWidth', 2);
+grid on;
+xlim ([0,10])
+xlabel('Time [s]');
+ylabel('Velocity [m/s]');
+legend('ẋ(t)','ẏ(t)','ż(t)');
+title('Controller to minimize final velocity (third triplet) - velocities');
 
 % 6. Preparazione Dati per il Plot
 % Estraiamo le posizioni (x, y, z) dai risultati calcolati
