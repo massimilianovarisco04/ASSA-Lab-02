@@ -488,13 +488,20 @@ xi = 0.7;
 % Scelgo 3 triplette diverse di omega per mostrare come posizione e velocità
 % del sistema reagiscono a diversi design del controllore
 
-% Prima tripletta (0.001, 0.002, 0.005)
-omega_n1_1 = 0.001; 
+B_u = [0, 0, 0;
+       1, 0, 0;
+       0, 0, 0;
+       0, 1, 0;
+       0, 0, 0;
+       0, 0, 1];
+
+% Prima tripletta (0.002, 0.003, 0.005)
+omega_n1_1 = 0.002; 
 omega_d1_1 = omega_n1_1*sqrt(1-xi^2);
 pC_1_1 = -xi*omega_n1_1 + 1i*omega_d1_1;
 pC_2_1 = -xi*omega_n1_1 - 1i*omega_d1_1;
 
-omega_n2_1 = 0.002; 
+omega_n2_1 = 0.003; 
 omega_d2_1 = omega_n2_1*sqrt(1-xi^2);
 pC_3_1 = -xi*omega_n2_1 + 1i*omega_d2_1;
 pC_4_1 = -xi*omega_n2_1 - 1i*omega_d2_1;
@@ -523,7 +530,7 @@ sys_cl_1=ss(A_c_1, [], C, D);
 %posizione al set point. (si deduce anche da come è fatta la costante di
 %tempo, ma il ragionamento è analogo). 
 
-% Seconda tripletta (0.1, 0.2, 0.5)
+% Seconda tripletta (0.01, 0.02, 0.05)
 omega_n1_2 = 0.01; 
 omega_d1_2 = omega_n1_2*sqrt(1-xi^2);
 pC_1_2 = -xi*omega_n1_2 + 1i*omega_d1_2;
@@ -587,7 +594,7 @@ xlim ([0,5000])
 xlabel('Time [s]');
 ylabel('Position [m]');
 legend('x(t)','y(t)','z(t)');
-title('Controller to minimize fuel consumption (first triplet) - position');
+title('First triplet) - position');
 
 subplot(3,2,2)
 plot(t_out_1, x_out_1(:,2), 'LineWidth', 2);
@@ -599,7 +606,7 @@ xlim ([0,5000]);
 xlabel('Time [s]');
 ylabel('Velocity [m/s]');
 legend('ẋ(t)','ẏ(t)','ż(t)');
-title('Controller to minimize fuel consumption (first triplet) - velocities');
+title('First triplet) - velocities');
 
 subplot(3,2,3)
 plot(t_out_2, x_out_2(:,1), 'LineWidth', 2);
@@ -611,7 +618,7 @@ xlim ([0,500]);
 xlabel('Time [s]');
 ylabel('Position [m]');
 legend('x(t)','y(t)','z(t)');
-title('System with state space controller (second triplet) - position');
+title('Second triplet - position');
 
 subplot(3,2,4)
 plot(t_out_2, x_out_2(:,2), 'LineWidth', 2);
@@ -623,7 +630,7 @@ xlim ([0,500])
 xlabel('Time [s]');
 ylabel('Velocity [m/s]');
 legend('ẋ(t)','ẏ(t)','ż(t)');
-title('System with state space controller (second triplet) - velocities');
+title('Second triplet - velocities');
 
 subplot(3,2,5)
 plot(t_out_3, x_out_3(:,1), 'LineWidth', 2);
@@ -635,7 +642,7 @@ xlim ([0,10]);
 xlabel('Time [s]');
 ylabel('Position [m]');
 legend('x(t)','y(t)','z(t)');
-title('Controller to minimize final velocity (third triplet) - position');
+title('Third triplet - position');
 
 subplot(3,2,6)
 plot(t_out_3, x_out_3(:,2), 'LineWidth', 2);
@@ -647,7 +654,66 @@ xlim ([0,10])
 xlabel('Time [s]');
 ylabel('Velocity [m/s]');
 legend('ẋ(t)','ẏ(t)','ż(t)');
-title('Controller to minimize final velocity (third triplet) - velocities');
+title('Third triplet - velocities');
+
+% Grafico che mostra il consumo nel sistema
+u1 = -K_1 * x_out_1'; 
+u2 = -K_2 * x_out_2';
+u3 = -K_3 * x_out_3';
+
+norm_u1 = vecnorm(u1);
+norm_u2 = vecnorm(u2);
+norm_u3 = vecnorm(u3);
+
+figure('Name', 'Control Effort Comparison');
+subplot(3,1,1)
+plot(t_out_1, norm_u1, 'LineWidth', 2);
+title('Control Effort - Triplet 1 (Fuel Minimization)');
+ylabel('|u(t)| [m/s^2]'); 
+xlabel('Time [s]'); 
+grid on;
+
+subplot(3,1,2)
+plot(t_out_2, norm_u2, 'LineWidth', 2);
+title('Control Effort - Triplet 1 (Fuel Minimization)');
+ylabel('|u(t)| [m/s^2]'); 
+xlabel('Time [s]'); 
+grid on;
+
+subplot(3,1,3)
+plot(t_out_3, norm_u3, 'LineWidth', 2);
+title('Control Effort - Triplet 1 (Fuel Minimization)');
+ylabel('|u(t)| [m/s^2]'); 
+xlabel('Time [s]'); 
+grid on;
+
+% Grafico che mostra distanza tra chaser e target e andamento delle
+% velocità
+% Prima tripletta
+dist_1 = sqrt(x_out_1(:,1).^2 + x_out_1(:,3).^2 + x_out_1(:,5).^2);
+vel_1  = sqrt(x_out_1(:,2).^2 + x_out_1(:,4).^2 + x_out_1(:,6).^2);
+
+% Seconda tripletta
+dist_2 = sqrt(x_out_2(:,1).^2 + x_out_2(:,3).^2 + x_out_2(:,5).^2);
+vel_2  = sqrt(x_out_2(:,2).^2 + x_out_2(:,4).^2 + x_out_2(:,6).^2);
+
+% Terza tripletta
+dist_3 = sqrt(x_out_3(:,1).^2 + x_out_3(:,3).^2 + x_out_3(:,5).^2);
+vel_3  = sqrt(x_out_3(:,2).^2 + x_out_3(:,4).^2 + x_out_3(:,6).^2);
+
+% Plot del piano di fase
+figure('Name', 'Phase Portrait: Approach Safety');
+plot(dist_1, vel_1, 'b', 'LineWidth', 2); 
+hold on;
+plot(dist_2, vel_2, 'LineWidth', 2);
+hold on;
+plot(dist_3, vel_3, 'LineWidth', 2);
+grid on;
+set(gca, 'XDir', 'reverse'); % Invertiamo l'asse X per leggere da destra verso sinistra (approccio)
+xlabel('Distance from Target [m]');
+ylabel('Total Velocity [m/s]');
+legend('Slow Approach (Triplet 1)', 'Aggressive Approach (Triplet 3)');
+title('Velocity during Final Approach');
 
 % 6. Preparazione Dati per il Plot
 % Estraiamo le posizioni (x, y, z) dai risultati calcolati
