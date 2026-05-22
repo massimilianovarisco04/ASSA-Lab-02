@@ -801,16 +801,22 @@ ylim([-900, 300]);
 xlim([-500, 300]);
 
 %% 6.2 Nonlinear Closed-loop Simulation
+
 % Definizione parametri iniziali: trovo posizione e velocità di A dopo
 % mezzo periodo di free-flight del chaser
-
-t_vec = linspace(0, t_wait_opt+t_tof_opt + tau_opt, 500);
-stati_A_ind = getState(coeff_A, t_vec, n);
+t_prop_A = linspace(0, t_wait_opt+t_tof_opt + tau_opt, 500);
+stati_A_ind = getState(coeff_A, t_prop_A, n);
 t_0_mezza_orbita = 0;
 t_f_mezza_orbita = T/2;
 
-
+%questo dv2 è calcolato sui mopdelli lineari, facendo la differenza fra la
+%aerfetta orbita A all'istante di tempo in cui il Chaser ci arriva sopra, e
+%il modo in cui invece ci arriva il Chaser prima del dv2
 dv2 = stati_A_ind([2,4,6],end) - A_orbit_linear([2, 4, 6], end);
+%questo transfer_orbit è lo stato non lineare del chaser nel momento in cui
+%arriva sull'orbita A, che usiamo, sommato al dv2, come condizione iniziale
+%di propagazione di un modello non lineare di mezzo periododi attesa prima
+%di andare sul Target
 x0 = transfer_orbit(end,:) + ([0, dv2(1), 0, dv2(2), 0, dv2(3)]);
 
 ODE_obj = ode;  
@@ -823,10 +829,47 @@ ODE_obj = ode;
 
 % Uso come condizioni iniziali quelle nell'orbita A dopo un free-flight di
 % mezzo periodo
+[t_out, x_out, ] = ode45(@(t,x) closed_loop_nonlinear(t, x, K_1, proximityP), t, x_mezza_orbita(end, :));
+u_c=-K_1*x_out';
 
-[t_out, x_out] = ode45(@(t,x) closed_loop_nonlinear(t, x, K_1, proximityP), t, x_mezza_orbita(end, :));
+%generiamo i plot 2D richiesti:
+figure('Name', 'Target Approach - 2D Graphs')
+subplot(3,1,1)
+plot(t_out, x_out(:,1), 'LineWidth', 4);
+hold on;
+plot(t_out, x_out(:,3), 'LineWidth', 4);
+plot(t_out, x_out(:,5), 'LineWidth', 4);
+grid on;
+xlim ([0,5000])
+xlabel('Time [s]');
+ylabel('Position [m]');
+legend('x(t)','y(t)','z(t)');
+title('Position');
 
-% 6. Preparazione Dati per il Plot
+subplot(3,1,2)
+plot(t_out, x_out(:,2), 'LineWidth', 4);
+hold on;
+plot(t_out, x_out(:,4), 'LineWidth', 4);
+plot(t_out, x_out(:,6), 'LineWidth', 4);
+grid on;
+xlabel('Time [s]');
+ylabel('Velocity [m/s]');
+legend('ẋ(t)','ẏ(t)','ż(t)');
+title('Velocity');
+
+subplot(3,1,3)
+plot(t_out, u_c(1,:), 'LineWidth', 4);
+hold on;
+plot(t_out, u_c(2,:), 'LineWidth', 4);
+plot(t_out, u_c(3,:), 'LineWidth', 4);
+grid on;
+xlabel('Time [s]');
+ylabel('Acceleration [m/s^2]');
+legend('x(t)','y(t)','z(t)');
+title('Acceleration');
+
+
+% 6. Preparazione Dati per il Plot 3D
 % Estraiamo le posizioni (x, y, z) dai risultati calcolati
 % -- Modello NON Lineare --
 pos_D_NL = D_orbit(:, [1, 3, 5]);
