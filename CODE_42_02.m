@@ -602,7 +602,7 @@ xlim ([0,5000])
 xlabel('Time [s]');
 ylabel('Position [m]');
 legend('x(t)','y(t)','z(t)');
-title('First case) - position');
+title('First case - position');
 
 subplot(3,2,2)
 plot(t_out_1, x_out_1(:,2), 'LineWidth', 2);
