@@ -495,18 +495,18 @@ B_u = [0, 0, 0;
        0, 0, 0;
        0, 0, 1];
 
-% Prima tripletta (0.002, 0.003, 0.005)
+% Primo caso omega = 0.002
 omega_n1_1 = 0.002; 
 omega_d1_1 = omega_n1_1*sqrt(1-xi^2);
 pC_1_1 = -xi*omega_n1_1 + 1i*omega_d1_1;
 pC_2_1 = -xi*omega_n1_1 - 1i*omega_d1_1;
 
-omega_n2_1 = 0.003; 
+omega_n2_1 = 0.002; 
 omega_d2_1 = omega_n2_1*sqrt(1-xi^2);
 pC_3_1 = -xi*omega_n2_1 + 1i*omega_d2_1;
 pC_4_1 = -xi*omega_n2_1 - 1i*omega_d2_1;
 
-omega_n3_1 = 0.005; 
+omega_n3_1 = 0.002; 
 omega_d3_1 = omega_n3_1*sqrt(1-xi^2);
 pC_5_1 = -xi*omega_n3_1 + 1i*omega_d3_1;
 pC_6_1 = -xi*omega_n3_1 - 1i*omega_d3_1;
@@ -537,18 +537,18 @@ sys_cl_1=ss(A_c_1, [], C, D);
 %posizione al set point. (si deduce anche da come è fatta la costante di
 %tempo, ma il ragionamento è analogo). 
 
-% Seconda tripletta (0.01, 0.02, 0.05)
-omega_n1_2 = 0.01; 
+% Seconda caso (omega = 0.08)
+omega_n1_2 = 0.08; 
 omega_d1_2 = omega_n1_2*sqrt(1-xi^2);
 pC_1_2 = -xi*omega_n1_2 + 1i*omega_d1_2;
 pC_2_2 = -xi*omega_n1_2 - 1i*omega_d1_2;
 
-omega_n2_2 = 0.02; 
+omega_n2_2 = 0.08; 
 omega_d2_2 = omega_n2_2*sqrt(1-xi^2);
 pC_3_2 = -xi*omega_n2_2 + 1i*omega_d2_2;
 pC_4_2 = -xi*omega_n2_2 - 1i*omega_d2_2;
 
-omega_n3_2 = 0.05; 
+omega_n3_2 = 0.08; 
 omega_d3_2 = omega_n3_2*sqrt(1-xi^2);
 pC_5_2 = -xi*omega_n3_2 + 1i*omega_d3_2;
 pC_6_2 = -xi*omega_n3_2 - 1i*omega_d3_2;
@@ -560,18 +560,18 @@ A_c_2=A-B_u*K_2;
 
 sys_cl_2=ss(A_c_2, [], C, D);
 
-% Terza tripletta (1, 2, 5)
-omega_n1_3 = 1; 
+% Terzo caso (omega = 0.8)
+omega_n1_3 = 0.8; 
 omega_d1_3 = omega_n1_3*sqrt(1-xi^2);
 pC_1_3 = -xi*omega_n1_3 + 1i*omega_d1_3;
 pC_2_3 = -xi*omega_n1_3 - 1i*omega_d1_3;
 
-omega_n2_3 = 2; 
+omega_n2_3 = 0.8; 
 omega_d2_3 = omega_n2_3*sqrt(1-xi^2);
 pC_3_3 = -xi*omega_n2_3 + 1i*omega_d2_3;
 pC_4_3 = -xi*omega_n2_3 - 1i*omega_d2_3;
 
-omega_n3_3 = 5; 
+omega_n3_3 = 0.8; 
 omega_d3_3 = omega_n3_3*sqrt(1-xi^2);
 pC_5_3 = -xi*omega_n3_3 + 1i*omega_d3_3;
 pC_6_3 = -xi*omega_n3_3 - 1i*omega_d3_3;
@@ -590,6 +590,7 @@ x0 = A_orbit_linear(:,end);
 [x_dot_2, t_out_2, x_out_2] = initial(sys_cl_2, x0, t);
 [x_dot_3, t_out_3, x_out_3] = initial(sys_cl_3, x0, t);
 
+% Grafici che mostrano andamento di posizione e velocità
 figure('Name', 'Chaser to Target with Space-State Controller')
 subplot(3,2,1)
 plot(t_out_1, x_out_1(:,1), 'LineWidth', 2);
@@ -601,7 +602,7 @@ xlim ([0,5000])
 xlabel('Time [s]');
 ylabel('Position [m]');
 legend('x(t)','y(t)','z(t)');
-title('First triplet) - position');
+title('First case) - position');
 
 subplot(3,2,2)
 plot(t_out_1, x_out_1(:,2), 'LineWidth', 2);
@@ -613,7 +614,7 @@ xlim ([0,5000]);
 xlabel('Time [s]');
 ylabel('Velocity [m/s]');
 legend('ẋ(t)','ẏ(t)','ż(t)');
-title('First triplet) - velocities');
+title('First case - velocities');
 
 subplot(3,2,3)
 plot(t_out_2, x_out_2(:,1), 'LineWidth', 2);
@@ -625,7 +626,7 @@ xlim ([0,500]);
 xlabel('Time [s]');
 ylabel('Position [m]');
 legend('x(t)','y(t)','z(t)');
-title('Second triplet - position');
+title('Second case - position');
 
 subplot(3,2,4)
 plot(t_out_2, x_out_2(:,2), 'LineWidth', 2);
@@ -637,7 +638,7 @@ xlim ([0,500])
 xlabel('Time [s]');
 ylabel('Velocity [m/s]');
 legend('ẋ(t)','ẏ(t)','ż(t)');
-title('Second triplet - velocities');
+title('Second case - velocities');
 
 subplot(3,2,5)
 plot(t_out_3, x_out_3(:,1), 'LineWidth', 2);
@@ -649,7 +650,7 @@ xlim ([0,10]);
 xlabel('Time [s]');
 ylabel('Position [m]');
 legend('x(t)','y(t)','z(t)');
-title('Third triplet - position');
+title('Third case - position');
 
 subplot(3,2,6)
 plot(t_out_3, x_out_3(:,2), 'LineWidth', 2);
@@ -661,7 +662,7 @@ xlim ([0,10])
 xlabel('Time [s]');
 ylabel('Velocity [m/s]');
 legend('ẋ(t)','ẏ(t)','ż(t)');
-title('Third triplet - velocities');
+title('Third case - velocities');
 
 % Grafico che mostra il consumo nel sistema
 u1 = -K_1 * x_out_1'; 
@@ -675,42 +676,45 @@ norm_u3 = vecnorm(u3);
 figure('Name', 'Control Effort Comparison');
 subplot(3,1,1)
 plot(t_out_1, norm_u1, 'LineWidth', 2);
-title('Control Effort - Triplet 1 (Fuel Minimization)');
+title('Control Effort - Case 1 (Fuel Minimization)');
 ylabel('|u(t)| [m/s^2]'); 
 xlabel('Time [s]'); 
+xlim ([0,3000]);
 grid on;
 
 subplot(3,1,2)
 plot(t_out_2, norm_u2, 'LineWidth', 2);
-title('Control Effort - Triplet 1 (Fuel Minimization)');
+title('Control Effort - Case 2 (Fuel Minimization)');
 ylabel('|u(t)| [m/s^2]'); 
 xlabel('Time [s]'); 
+xlim([0,400]);
 grid on;
 
 subplot(3,1,3)
 plot(t_out_3, norm_u3, 'LineWidth', 2);
-title('Control Effort - Triplet 1 (Fuel Minimization)');
+title('Control Effort - Case 3 (Fuel Minimization)');
 ylabel('|u(t)| [m/s^2]'); 
 xlabel('Time [s]'); 
+xlim([0,50]);
 grid on;
 
 % Grafico che mostra distanza tra chaser e target e andamento delle
 % velocità
-% Prima tripletta
+% Primo caso
 dist_1 = sqrt(x_out_1(:,1).^2 + x_out_1(:,3).^2 + x_out_1(:,5).^2);
 vel_1  = sqrt(x_out_1(:,2).^2 + x_out_1(:,4).^2 + x_out_1(:,6).^2);
 
-% Seconda tripletta
+% Secondo caso
 dist_2 = sqrt(x_out_2(:,1).^2 + x_out_2(:,3).^2 + x_out_2(:,5).^2);
 vel_2  = sqrt(x_out_2(:,2).^2 + x_out_2(:,4).^2 + x_out_2(:,6).^2);
 
-% Terza tripletta
+% Terzo casi
 dist_3 = sqrt(x_out_3(:,1).^2 + x_out_3(:,3).^2 + x_out_3(:,5).^2);
 vel_3  = sqrt(x_out_3(:,2).^2 + x_out_3(:,4).^2 + x_out_3(:,6).^2);
 
 % Plot del piano di fase
-figure('Name', 'Phase Portrait: Approach Safety');
-plot(dist_1, vel_1, 'b', 'LineWidth', 2); 
+figure('Name', 'Velocity during Final Approach');
+plot(dist_1, vel_1, 'LineWidth', 2); 
 hold on;
 plot(dist_2, vel_2, 'LineWidth', 2);
 hold on;
@@ -719,7 +723,7 @@ grid on;
 set(gca, 'XDir', 'reverse'); % Invertiamo l'asse X per leggere da destra verso sinistra (approccio)
 xlabel('Distance from Target [m]');
 ylabel('Total Velocity [m/s]');
-legend('Slow Approach (Triplet 1)', 'Aggressive Approach (Triplet 3)');
+legend('Slow Approach (Case 1)', 'Medium Approach (Case 2)' , 'Aggressive Approach (Case 3)');
 title('Velocity during Final Approach');
 
 % 6. Preparazione Dati per il Plot
