@@ -915,15 +915,67 @@ tb = ta + t_tof_opt;  % tempo di trasferimento da D ad A (b)
 tc = tb + 0.5*T;      % tempo di permanenza su A prima di andare sul target (c)
 td = tc + 1.5*T;      % tempo di approccio al target e verifico che il sistema stia vicino realmente (d)
 
+dv1 = dv1_opt;
+
 ex = sim("simulink_02_nonlinear.slx");
 
 figure('Name','Simulink Simulation')
 plot3(ex.x_a,ex.y_a,ex.z_a,'LineWidth',1.5,'Color',col_NL);
 hold on;
 grid on;
-legend('Orbit D');
+plot3(ex.x_b,ex.y_b,ex.z_b,'LineWidth',2,'Color',col_NL);
+plot3(ex.x_c,ex.y_c,ex.z_c,'LineWidth',2,'Color',col_A);
+plot3(ex.x_d,ex.y_d,ex.z_d,'LineWidth',2,'Color',col_C);
+plot3([ex.x_a(end); ex.x_b(1)], [ex.y_a(end); ex.y_b(1)], [ex.z_a(end); ex.z_b(1)], 'LineWidth', 2, 'Color', col_NL, 'HandleVisibility', 'off');
+% Collega la fine di B con l'inizio di C
+plot3([ex.x_b(end); ex.x_c(1)], [ex.y_b(end); ex.y_c(1)], [ex.z_b(end); ex.z_c(1)], 'LineWidth', 2, 'Color', col_A, 'HandleVisibility', 'off');
+% Collega la fine di C con l'inizio di D
+plot3([ex.x_c(end); ex.x_d(1)], [ex.y_c(end); ex.y_d(1)], [ex.z_c(end); ex.z_d(1)], 'LineWidth', 2, 'Color', col_C, 'HandleVisibility', 'off');
+plot3(pos_A_L(:,1), pos_A_L(:,2), pos_A_L(:,3), ':', 'Color', col_A, 'LineWidth', 1.5);
+plot3(0, 0, 0, 'k+', 'MarkerSize', 12, 'LineWidth', 2);
+legend('Homing','Closing','Station Keeping','Final Approach','Orbit A Target','DisplayName', 'Origin (Chief)');
 ylim([-900, 300]);
 xlim([-500, 300]);
+
+% 7.2 - DELTAV BUDGET
+
+norm_dV1 = norm(dv1); 
+norm_dV2 = norm(dv2);
+
+idx_a = ex.tout <= ta;
+idx_b = (ex.tout >= ta) & (ex.tout <= tb);
+idx_c = (ex.tout >= tb) & (ex.tout <= tc);
+idx_d = (ex.tout >= tc) & (ex.tout <= td);
+
+% vettore dV_plot
+dV_total = zeros(size(ex.tout));
+dV_total(idx_a) = 0;
+dV_total(idx_b) = norm_dV1;
+dV_total(idx_c) = norm_dV1 + norm_dV2;
+dV_total(idx_d) = norm_dV1 + norm_dV2 + ex.deltav;
+
+figure('Name', 'Delta V Budget');
+
+plot(ex.tout(idx_a), dV_total(idx_a), 'LineWidth', 2.5, 'Color', col_NL); 
+hold on; 
+grid on;
+plot(ex.tout(idx_b), dV_total(idx_b), 'LineWidth', 2.5, 'Color', col_NL);
+plot(ex.tout(idx_c), dV_total(idx_c), 'LineWidth', 2.5, 'Color', col_A);
+plot(ex.tout(idx_d), dV_total(idx_d), 'LineWidth', 2.5, 'Color', col_C);
+
+% Unisce la fine di A (0) con l'inizio di B (norm_dV1) al tempo ta
+plot([ta; ta], [0; norm_dV1], '--', 'LineWidth', 1.5, 'Color', col_NL);
+% Unisce la fine di B (norm_dV1) con l'inizio di C (norm_dV1 + norm_dV2) al tempo tb
+plot([tb; tb], [norm_dV1; norm_dV1 + norm_dV2], '--', 'LineWidth', 1.5, 'Color', col_A);
+
+xlabel('Time [s]');
+ylabel('\DeltaV [m/s]');
+
+legend('Homing ', ...
+       ['Closing (\DeltaV_1 = ', num2str(round(norm_dV1,2)), ' m/s)'], ...
+       ['Station Keeping (\DeltaV_2 = ', num2str(round(norm_dV2,2)), ' m/s)'], ...
+       'Final Approach');
+
 %% ----------------------- Definizione Funzioni ---------------------------
 % Struttura contenente dati del problema
 function proximityP = proximity_parameters()
