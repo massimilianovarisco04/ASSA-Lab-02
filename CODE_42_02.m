@@ -963,23 +963,21 @@ dv1 = dv1_opt;
 ex = sim("simulink_02_nonlinear.slx");
 
 figure('Name','Simulink Simulation')
-plot3(ex.x_a,ex.y_a,ex.z_a,'LineWidth',1.5,'Color',col_NL);
+plot3(ex.x_a,ex.y_a,ex.z_a,'LineWidth',1.5);
 hold on;
 grid on;
 plot3(ex.x_b,ex.y_b,ex.z_b,'LineWidth',2,'Color',col_NL);
 plot3(ex.x_c,ex.y_c,ex.z_c,'LineWidth',2,'Color',col_A);
 plot3(ex.x_d,ex.y_d,ex.z_d,'LineWidth',2,'Color',col_C);
-plot3([ex.x_a(end); ex.x_b(1)], [ex.y_a(end); ex.y_b(1)], [ex.z_a(end); ex.z_b(1)], 'LineWidth', 2, 'Color', col_NL, 'HandleVisibility', 'off');
-% Collega la fine di B con l'inizio di C
-plot3([ex.x_b(end); ex.x_c(1)], [ex.y_b(end); ex.y_c(1)], [ex.z_b(end); ex.z_c(1)], 'LineWidth', 2, 'Color', col_A, 'HandleVisibility', 'off');
-% Collega la fine di C con l'inizio di D
-plot3([ex.x_c(end); ex.x_d(1)], [ex.y_c(end); ex.y_d(1)], [ex.z_c(end); ex.z_d(1)], 'LineWidth', 2, 'Color', col_C, 'HandleVisibility', 'off');
 plot3(pos_A_L(:,1), pos_A_L(:,2), pos_A_L(:,3), ':', 'Color', col_A, 'LineWidth', 1.5);
 plot3(0, 0, 0, 'k+', 'MarkerSize', 12, 'LineWidth', 2);
-legend('Homing','Closing','Station Keeping','Final Approach','Orbit A Target','DisplayName', 'Origin (Chief)');
-ylim([-900, 300]);
-xlim([-500, 300]);
 
+plot3([ex.x_a(end); ex.x_b(1)], [ex.y_a(end); ex.y_b(1)], [ex.z_a(end); ex.z_b(1)], 'LineWidth', 5, 'Color', col_NL);
+% Collega la fine di B con l'inizio di C
+plot3([ex.x_b(end); ex.x_c(1)], [ex.y_b(end); ex.y_c(1)], [ex.z_b(end); ex.z_c(1)], 'LineWidth', 5, 'Color', col_A);
+% Collega la fine di C con l'inizio di D
+plot3([ex.x_c(end); ex.x_d(1)], [ex.y_c(end); ex.y_d(1)], [ex.z_c(end); ex.z_d(1)], 'LineWidth', 5, 'Color', col_C);
+legend('Homing','Closing','Station Keeping','Final Approach','Orbit A Target','Origin (Chief)','(a) --> (b)','(b) --> (c)','(c) --> (d)');
 % 7.2 - DELTAV BUDGET
 
 norm_dV1 = norm(dv1); 
