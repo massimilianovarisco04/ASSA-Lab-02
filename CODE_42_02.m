@@ -978,6 +978,8 @@ plot3([ex.x_b(end); ex.x_c(1)], [ex.y_b(end); ex.y_c(1)], [ex.z_b(end); ex.z_c(1
 % Collega la fine di C con l'inizio di D
 plot3([ex.x_c(end); ex.x_d(1)], [ex.y_c(end); ex.y_d(1)], [ex.z_c(end); ex.z_d(1)], 'LineWidth', 5, 'Color', col_C);
 legend('Homing','Closing','Station Keeping','Final Approach','Orbit A Target','Origin (Chief)','(a) --> (b)','(b) --> (c)','(c) --> (d)');
+xlabel('x [m]'); ylabel('y [m]'); zlabel('z [m]');
+
 % 7.2 - DELTAV BUDGET
 
 norm_dV1 = norm(dv1); 
@@ -997,7 +999,7 @@ dV_total(idx_d) = norm_dV1 + norm_dV2 + ex.deltav;
 
 figure('Name', 'Delta V Budget');
 
-plot(ex.tout(idx_a), dV_total(idx_a), 'LineWidth', 2.5, 'Color', col_NL); 
+plot(ex.tout(idx_a), dV_total(idx_a), 'LineWidth', 2.5); 
 hold on; 
 grid on;
 plot(ex.tout(idx_b), dV_total(idx_b), 'LineWidth', 2.5, 'Color', col_NL);
