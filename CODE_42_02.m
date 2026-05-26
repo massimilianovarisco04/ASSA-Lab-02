@@ -397,7 +397,7 @@ xlabel('x [m]'); ylabel('y [m]'); zlabel('z [m]');
 title('Nonlinear transfer trajectory');
 legend('Location', 'best');
 axis equal; 
-view(30, 40); % Angolo per visualizzare bene la differenza lungo l'asse Y
+view(70, 50); % Angolo per visualizzare bene la differenza lungo l'asse Y
 hold off;
 ylim([-900, 300]);
 xlim([-500, 300]);
