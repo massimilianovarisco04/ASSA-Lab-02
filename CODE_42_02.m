@@ -979,6 +979,8 @@ plot3([ex.x_b(end); ex.x_c(1)], [ex.y_b(end); ex.y_c(1)], [ex.z_b(end); ex.z_c(1
 plot3([ex.x_c(end); ex.x_d(1)], [ex.y_c(end); ex.y_d(1)], [ex.z_c(end); ex.z_d(1)], 'LineWidth', 5, 'Color', col_C);
 legend('Homing','Closing','Station Keeping','Final Approach','Orbit A Target','Origin (Chief)','(a) --> (b)','(b) --> (c)','(c) --> (d)');
 xlabel('x [m]'); ylabel('y [m]'); zlabel('z [m]');
+xlim ([-800 800]);
+ylim ([-1000 400]);
 
 % 7.2 - DELTAV BUDGET
 
