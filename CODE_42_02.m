@@ -402,78 +402,6 @@ hold off;
 ylim([-900, 300]);
 xlim([-500, 300]);
 
-% figure('Name','3D Real-Time Trajectory Animation','NumberTitle','off');
-% hold on; grid on; axis equal; 
-% view(70, 50); % Stesso angolo di visualizzazione del tuo primo plot
-% xlabel('x [m]'); ylabel('y [m]'); zlabel('z [m]');
-% title('3D Animation: Linear vs Nonlinear Proximity Operations');
-% 
-% % 1. Disegno dello sfondo statico (Orbita Target A e Origine)
-% plot3(pos_A_L(:,1), pos_A_L(:,2), pos_A_L(:,3), ':', 'Color', col_A, 'LineWidth', 1.5, 'Handlevisibility', 'off');
-% plot3(0, 0, 0, 'k+', 'MarkerSize', 10, 'LineWidth', 2, 'DisplayName', 'Origin (Chief)');
-% 
-% % 2. Inizializzazione delle linee animate (Scia dei satelliti)
-% an_D_NL = animatedline('Color', col_NL, 'LineWidth', 1.5, 'LineStyle', '-',  'DisplayName', 'Nonlinear Path');
-% an_T_NL = animatedline('Color', col_NL, 'LineWidth', 2.5, 'LineStyle', '-');
-% an_D_L  = animatedline('Color', col_L,  'LineWidth', 1.5, 'LineStyle', '--', 'DisplayName', 'Linear Path');
-% an_T_L  = animatedline('Color', col_L,  'LineWidth', 2.5, 'LineStyle', '--');
-% 
-% % 3. Inizializzazione dei Marker per i satelliti in movimento
-% sat_NL = plot3(NaN, NaN, NaN, 'o', 'Color', col_NL, 'MarkerFaceColor', col_NL, 'MarkerSize', 6, 'DisplayName', 'Sat NL');
-% sat_L  = plot3(NaN, NaN, NaN, 'o', 'Color', col_L,  'MarkerFaceColor', col_L,  'MarkerSize', 6, 'DisplayName', 'Sat Linear');
-% 
-% legend('Location', 'best');
-% 
-% % Configurazione campionamento animazione (Numero di fotogrammi per fase)
-% N_frames = 200; 
-% pause_time = 0.01; % Minore = più veloce, Maggiore = più lento
-% 
-% t_wait_common = linspace(0, t_wait_opt, N_frames);
-% pos_D_NL_interp = interp1(tt(:), pos_D_NL, t_wait_common(:));
-% 
-% % SOLUZIONE: Genera il vettore dei tempi basandoti sul numero reale di righe di pos_D_L (1000 punti)
-% t_D_L_real = linspace(0, t_wait_opt, size(pos_D_L, 1));
-% pos_D_L_interp  = interp1(t_D_L_real(:), pos_D_L, t_wait_common(:));
-% 
-% % Punto di partenza iniziale (t=0)
-% plot3(pos_D_L(1,1), pos_D_L(1,2), pos_D_L(1,3), 'ko', 'MarkerFaceColor', 'k', 'MarkerSize', 6, 'Handlevisibility', 'off');
-% 
-% for i = 1:N_frames
-%     % Aggiorna le scie (Fase Attesa)
-%     addpoints(an_D_NL, pos_D_NL_interp(i,1), pos_D_NL_interp(i,2), pos_D_NL_interp(i,3));
-%     addpoints(an_D_L,  pos_D_L_interp(i,1),  pos_D_L_interp(i,2),  pos_D_L_interp(i,3));
-% 
-%     % Muovi i satelliti
-%     set(sat_NL, 'XData', pos_D_NL_interp(i,1), 'YData', pos_D_NL_interp(i,2), 'ZData', pos_D_NL_interp(i,3));
-%     set(sat_L,  'XData', pos_D_L_interp(i,1),  'YData', pos_D_L_interp(i,2),  'ZData', pos_D_L_interp(i,3));
-% 
-%     drawnow;
-%     pause(pause_time);
-% end
-% % --- FASE 2: ANIMAZIONE TRASFERIMENTO (Transfer) ---
-% t_tof_common = linspace(0, t_tof_opt, N_frames);
-% pos_T_NL_interp = interp1(t_trasferimento(:), pos_T_NL, t_tof_common(:));
-% pos_T_L_interp  = interp1(t_tof_vec(:), pos_T_L', t_tof_common(:)); % Trasposta per match dimensioni
-% 
-% for i = 1:N_frames
-%     % Aggiorna le scie (Fase Trasferimento)
-%     addpoints(an_T_NL, pos_T_NL_interp(i,1), pos_T_NL_interp(i,2), pos_T_NL_interp(i,3));
-%     addpoints(an_T_L,  pos_T_L_interp(i,1),  pos_T_L_interp(i,2),  pos_T_L_interp(i,3));
-% 
-%     % Muovi i satelliti
-%     set(sat_NL, 'XData', pos_T_NL_interp(i,1), 'YData', pos_T_NL_interp(i,2), 'ZData', pos_T_NL_interp(i,3));
-%     set(sat_L,  'XData', pos_T_L_interp(i,1),  'YData', pos_T_L_interp(i,2),  'ZData', pos_T_L_interp(i,3));
-% 
-%     drawnow;
-%     pause(pause_time);
-% end
-% 
-% % Marker finali di Arrivo
-% plot3(pos_T_NL(end,1), pos_T_NL(end,2), pos_T_NL(end,3), 's', 'Color', col_NL, 'MarkerFaceColor', col_NL, 'MarkerSize', 10, 'Handlevisibility', 'off');
-% plot3(pos_T_L(1,end),  pos_T_L(2,end),  pos_T_L(3,end),  's', 'Color', col_L,  'MarkerFaceColor', col_L,  'MarkerSize', 10, 'Handlevisibility', 'off');
-% 
-% hold off;
-% 
 
 %% 6.1 Control Law Design and Validation
 
@@ -487,13 +415,6 @@ xi = 0.7;
 
 % Scelgo 3 triplette diverse di omega per mostrare come posizione e velocità
 % del sistema reagiscono a diversi design del controllore
-
-B_u = [0, 0, 0;
-       1, 0, 0;
-       0, 0, 0;
-       0, 1, 0;
-       0, 0, 0;
-       0, 0, 1];
 
 % Primo caso omega = 0.002
 omega_n1_1 = 0.002; 
@@ -905,33 +826,18 @@ plot3(pos_A_L(:,1), pos_A_L(:,2), pos_A_L(:,3), ':', 'Color', col_A, 'LineWidth'
 
 % 2. Plot Fase di Attesa sull'Orbita D
 plot3(pos_D_NL(:,1), pos_D_NL(:,2), pos_D_NL(:,3), '-', 'Color', col_NL, 'LineWidth', 1.5, 'DisplayName', 'Waiting time D (Non Linear)');
-% plot3(pos_D_L(:,1), pos_D_L(:,2), pos_D_L(:,3), '--', 'Color', col_L, 'LineWidth', 1.5, 'DisplayName', 'Waiting time D (Linear)');
 
 % 3. Plot Fase di Trasferimento (Senza Controllo)
 plot3(pos_T_NL(:,1), pos_T_NL(:,2), pos_T_NL(:,3), '-', 'Color', col_NL, 'LineWidth', 2.5, 'DisplayName', 'Transfer (Non Linear)');
-% plot3(pos_T_L(1,:), pos_T_L(2,:), pos_T_L(3,:), '--', 'Color', col_L, 'LineWidth', 2.5, 'DisplayName', 'Transfer (Linear)');
 
 % Plotto mezzo periodo sull'orbita A
-plot3(x_mezza_orbita(:,1), x_mezza_orbita(:,3), x_mezza_orbita(:,5), 'LineWidth', 2);
+plot3(x_mezza_orbita(:,1), x_mezza_orbita(:,3), x_mezza_orbita(:,5), 'LineWidth', 2,'DisplayName','Station Keeping');
 
 % 3.1 Plot Fase di Trasferimento (CON Controllo)
 plot3(x_out(:,1), x_out(:,3), x_out(:,5), '-', 'Color', col_C, 'LineWidth', 3, 'DisplayName', 'Transfer (Controlled)');
 
-% % 4. MARKERS: Punti Notevoli
- % Punto di partenza comune (t=0)
-% plot3(stati_A_ind(1,end), stati_A_ind(3,end), stati_A_ind(5,end), 'ko', 'MarkerFaceColor', 'k', 'MarkerSize', 6, 'DisplayName', 'Start (t=0)');
-% 
-% % Punto di applicazione del Delta-V 1 (Inizio manovra / attivazione controllo)
-% plot3(pos_D_NL(end,1), pos_D_NL(end,2), pos_D_NL(end,3), 'o', 'Color', col_NL, 'MarkerFaceColor', col_NL, 'MarkerSize', 7, 'DisplayName', 'Impulse NL');
-% plot3(pos_D_L(end,1), pos_D_L(end,2), pos_D_L(end,3), 'o', 'Color', col_L, 'MarkerFaceColor', col_L, 'MarkerSize', 7, 'DisplayName', 'Impulse Linear');
-% plot3(pos_C_L(1,1), pos_C_L(1,2), pos_C_L(1,3), 'o', 'Color', col_C, 'MarkerFaceColor', col_C, 'MarkerSize', 7, 'DisplayName', 'Start Control');
-% 
-% % Punto di Arrivo (Dove si vede l'errore calcolato nei sistemi ad anello aperto)
- plot3(pos_T_NL(end,1), pos_T_NL(end,2), pos_T_NL(end,3), 's', 'Color', col_NL, 'MarkerFaceColor', col_NL, 'MarkerSize', 10, 'DisplayName', 'Arrival NL');
- %plot3(pos_T_L(1,end), pos_T_L(2,end), pos_T_L(3,end), 's', 'Color', col_L, 'MarkerFaceColor', col_L, 'MarkerSize', 10, 'DisplayName', 'Arrival Linear');
-% 
- % Punto di Arrivo Controllato (Dovrebbe essere all'origine)
-% plot3(pos_C_L(end,1), pos_C_L(end,2), pos_C_L(end,3), 'p', 'Color', col_C, 'MarkerFaceColor', col_C, 'MarkerSize', 12, 'DisplayName', 'Arrival Controlled');
+% Punto di Arrivo (Dove si vede l'errore calcolato nei sistemi ad anello aperto)
+plot3(pos_T_NL(end,1), pos_T_NL(end,2), pos_T_NL(end,3), 's', 'Color', col_NL, 'MarkerFaceColor', col_NL, 'MarkerSize', 10, 'DisplayName', 'Arrival NL');
 
 % Origine (Target)
 plot3(0, 0, 0, 'k+', 'MarkerSize', 12, 'LineWidth', 2, 'DisplayName', 'Origin (Chief)');
@@ -972,6 +878,7 @@ plot3(ex.x_d,ex.y_d,ex.z_d,'LineWidth',2,'Color',col_C);
 plot3(pos_A_L(:,1), pos_A_L(:,2), pos_A_L(:,3), ':', 'Color', col_A, 'LineWidth', 1.5);
 plot3(0, 0, 0, 'k+', 'MarkerSize', 12, 'LineWidth', 2);
 
+% Collega la fine di A con l'inizio di B
 plot3([ex.x_a(end); ex.x_b(1)], [ex.y_a(end); ex.y_b(1)], [ex.z_a(end); ex.z_b(1)], 'LineWidth', 5, 'Color', col_NL);
 % Collega la fine di B con l'inizio di C
 plot3([ex.x_b(end); ex.x_c(1)], [ex.y_b(end); ex.y_c(1)], [ex.z_b(end); ex.z_c(1)], 'LineWidth', 5, 'Color', col_A);
@@ -1008,9 +915,9 @@ plot(ex.tout(idx_b), dV_total(idx_b), 'LineWidth', 2.5, 'Color', col_NL);
 plot(ex.tout(idx_c), dV_total(idx_c), 'LineWidth', 2.5, 'Color', col_A);
 plot(ex.tout(idx_d), dV_total(idx_d), 'LineWidth', 2.5, 'Color', col_C);
 
-% Unisce la fine di A (0) con l'inizio di B (norm_dV1) al tempo ta
+% Unisce la fine di A con l'inizio di B 
 plot([ta; ta], [0; norm_dV1], '--', 'LineWidth', 1.5, 'Color', col_NL);
-% Unisce la fine di B (norm_dV1) con l'inizio di C (norm_dV1 + norm_dV2) al tempo tb
+% Unisce la fine di B con l'inizio di C
 plot([tb; tb], [norm_dV1; norm_dV1 + norm_dV2], '--', 'LineWidth', 1.5, 'Color', col_A);
 
 xlabel('Time [s]');
@@ -1186,7 +1093,6 @@ function dx_t = closed_loop_nonlinear(t, x, K, proximityP)
 
     % Legge di controllo 
     u_c = -K*x;
-
     % Sistema NONLINEARE 
     x_dot = proximityP_non_linear (t,x, proximityP, u_c);
 
