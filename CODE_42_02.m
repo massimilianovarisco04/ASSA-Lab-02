@@ -2,7 +2,7 @@ clear;
 close all;
 clc;
 
-%% Task 1.1 - Nonlineare Simulation
+%% Task 1.1 - Nonlinear Simulation
 % Parametri per il sistema e condizioni iniziali
 scenari = ['A', 'B', 'C', 'D', 'E'];
 proximityP = proximity_parameters();
