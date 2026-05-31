@@ -65,9 +65,9 @@ for i = 1 : size(x0,2)
     plot(tt, xx(:,6), 'LineWidth',2);
     grid on;
     xlabel('Time[s]');
-    ylabel('Speed[m/s]');
-    legend('x_dot', 'y_dot', 'z_dot');
-    title(['Coordinates of speed case ', scenari(i)]);
+    ylabel('Velocity[m/s]');
+    legend('ẋ(t)', 'ẏ(t)', 'ż(t)');
+    title(['Velocity components - case ', scenari(i)]);
 end
 
 %% Task 2 - Analisys of the Linearized Dynamical System
